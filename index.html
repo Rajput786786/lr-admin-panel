@@ -74,7 +74,7 @@ th, td{
 <button onclick="login()">Login</button>
 </div>
 
-<!-- MAIN PANEL (HIDDEN FIRST) -->
+<!-- MAIN PANEL -->
 <div id="mainPanel" style="display:none;">
 
 <div class="card">
@@ -106,17 +106,22 @@ th, td{
 
 <script>
 
-// Supabase Config
 const supabase = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
 
-// LOGIN
 async function login(){
+
+console.log("Login started");
 
 let email = document.getElementById("loginEmail").value;
 let password = document.getElementById("loginPassword").value;
+
+if(!email || !password){
+alert("Enter Email & Password");
+return;
+}
 
 const { data, error } = await supabase.auth.signInWithPassword({
 email: email,
@@ -124,9 +129,11 @@ password: password
 });
 
 if(error){
-alert("Login Failed");
+alert("Login Failed: " + error.message);
 return;
 }
+
+alert("Login Success");
 
 document.getElementById("loginSection").style.display="none";
 document.getElementById("mainPanel").style.display="block";
@@ -134,12 +141,10 @@ document.getElementById("mainPanel").style.display="block";
 loadKeys();
 }
 
-// Random Key
 function randomKey(){
 return "LR-" + Math.floor(Math.random()*1000000);
 }
 
-// Generate Key
 async function generateKey(){
 
 let user = document.getElementById("username").value;
@@ -154,23 +159,32 @@ let key = randomKey();
 let expireDate = new Date();
 expireDate.setDate(expireDate.getDate() + days);
 
-await supabase.from("license_keys").insert([{
+const { error } = await supabase.from("license_keys").insert([{
 username:user,
 license_key:key,
 expire_date:expireDate,
 status:"Active"
 }]);
 
+if(error){
+alert("Insert Error: " + error.message);
+return;
+}
+
 loadKeys();
 }
 
-// Load Keys
 async function loadKeys(){
 
-let { data } = await supabase
+let { data, error } = await supabase
 .from("license_keys")
 .select("*")
 .order("id",{ascending:false});
+
+if(error){
+alert("Load Error");
+return;
+}
 
 let table = document.getElementById("keyTable");
 table.innerHTML="";
@@ -193,7 +207,6 @@ ${k.status=="Active" ? "Block" : "Unblock"}
 });
 }
 
-// Toggle Status
 async function toggleStatus(id,current){
 
 let newStatus = current=="Active" ? "Blocked" : "Active";
