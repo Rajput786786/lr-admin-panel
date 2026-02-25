@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>LR Owner Panel</title>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 body{
     margin:0;
@@ -11,7 +13,6 @@ body{
     background:#0f0f1a;
     color:white;
 }
-
 header{
     padding:20px;
     text-align:center;
@@ -20,11 +21,7 @@ header{
     color:#00ffff;
     box-shadow:0 0 20px #00ffff;
 }
-
-.container{
-    padding:20px;
-}
-
+.container{ padding:20px; }
 .card{
     background:#1a1a2e;
     padding:20px;
@@ -32,15 +29,13 @@ header{
     margin-bottom:20px;
     box-shadow:0 0 15px #00ffff33;
 }
-
-input, select{
+input{
     padding:10px;
     margin:5px 0;
     width:100%;
     border:none;
     border-radius:5px;
 }
-
 button{
     padding:10px;
     margin-top:10px;
@@ -52,30 +47,19 @@ button{
     font-weight:bold;
     cursor:pointer;
 }
-
-button:hover{
-    background:#00cccc;
-}
-
+button:hover{ background:#00cccc; }
 table{
     width:100%;
     margin-top:15px;
     border-collapse:collapse;
 }
-
 th, td{
     padding:10px;
     text-align:center;
     border-bottom:1px solid #333;
 }
-
-.status-active{
-    color:#00ff88;
-}
-
-.status-block{
-    color:red;
-}
+.status-active{ color:#00ff88; }
+.status-block{ color:red; }
 </style>
 </head>
 
@@ -96,7 +80,6 @@ th, td{
 
 <div class="card">
 <h3>Active Keys</h3>
-
 <table>
 <thead>
 <tr>
@@ -109,20 +92,25 @@ th, td{
 </thead>
 <tbody id="keyTable"></tbody>
 </table>
-
 </div>
 
 </div>
 
 <script>
 
-let keys = [];
+// 🔐 Supabase Config
+const supabase = window.supabase.createClient(
+"https://dpskhodrzlnqczibolug.supabase.co",
+"sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
+);
 
+// Random Key
 function randomKey(){
-    return "LR-" + Math.floor(Math.random()*100000);
+    return "LR-" + Math.floor(Math.random()*1000000);
 }
 
-function generateKey(){
+// Generate Key
+async function generateKey(){
 
     let user = document.getElementById("username").value;
     let days = parseInt(document.getElementById("days").value);
@@ -136,31 +124,37 @@ function generateKey(){
     let expireDate = new Date();
     expireDate.setDate(expireDate.getDate() + days);
 
-    keys.push({
-        user:user,
-        key:key,
-        expire:expireDate.toLocaleDateString(),
+    await supabase.from("license_keys").insert([{
+        username:user,
+        license_key:key,
+        expire_date:expireDate,
         status:"Active"
-    });
+    }]);
 
-    renderTable();
+    loadKeys();
 }
 
-function renderTable(){
+// Load Keys
+async function loadKeys(){
+
+    let { data } = await supabase
+        .from("license_keys")
+        .select("*")
+        .order("id",{ascending:false});
 
     let table = document.getElementById("keyTable");
     table.innerHTML="";
 
-    keys.forEach((k,index)=>{
+    data.forEach(k=>{
 
         table.innerHTML += `
         <tr>
-        <td>${k.user}</td>
-        <td>${k.key}</td>
-        <td>${k.expire}</td>
+        <td>${k.username}</td>
+        <td>${k.license_key}</td>
+        <td>${new Date(k.expire_date).toLocaleDateString()}</td>
         <td class="${k.status=="Active" ? "status-active" : "status-block"}">${k.status}</td>
         <td>
-        <button onclick="toggleStatus(${index})">
+        <button onclick="toggleStatus(${k.id},'${k.status}')">
         ${k.status=="Active" ? "Block" : "Unblock"}
         </button>
         </td>
@@ -169,18 +163,23 @@ function renderTable(){
     });
 }
 
-function toggleStatus(index){
+// Toggle Status
+async function toggleStatus(id,current){
 
-    if(keys[index].status=="Active"){
-        keys[index].status="Blocked";
-    }else{
-        keys[index].status="Active";
-    }
+    let newStatus = current=="Active" ? "Blocked" : "Active";
 
-    renderTable();
+    await supabase
+        .from("license_keys")
+        .update({status:newStatus})
+        .eq("id",id);
+
+    loadKeys();
 }
+
+// Auto Load on Page Start
+loadKeys();
 
 </script>
 
 </body>
-  </html>
+</html>
