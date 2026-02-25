@@ -19,7 +19,6 @@ header{
     font-size:24px;
     background:#111;
     color:#00ffff;
-    box-shadow:0 0 20px #00ffff;
 }
 .container{ padding:20px; }
 .card{
@@ -27,7 +26,6 @@ header{
     padding:20px;
     border-radius:10px;
     margin-bottom:20px;
-    box-shadow:0 0 15px #00ffff33;
 }
 input{
     padding:10px;
@@ -47,8 +45,18 @@ button{
     font-weight:bold;
     cursor:pointer;
 }
-button:hover{ background:#00cccc; }
-.hidden{ display:none; }
+table{
+    width:100%;
+    margin-top:15px;
+    border-collapse:collapse;
+}
+th, td{
+    padding:10px;
+    text-align:center;
+    border-bottom:1px solid #333;
+}
+.status-active{ color:#00ff88; }
+.status-block{ color:red; }
 </style>
 </head>
 
@@ -58,28 +66,27 @@ button:hover{ background:#00cccc; }
 
 <div class="container">
 
-<!-- LOGIN -->
-<div class="card" id="loginBox">
+<!-- LOGIN SECTION -->
+<div class="card" id="loginSection">
 <h3>Login</h3>
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
+<input type="email" id="loginEmail" placeholder="Email">
+<input type="password" id="loginPassword" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
-<!-- MAIN PANEL -->
-<div class="hidden" id="mainPanel">
+<!-- MAIN PANEL (HIDDEN FIRST) -->
+<div id="mainPanel" style="display:none;">
 
 <div class="card">
 <h3>Generate License Key</h3>
 <input type="text" id="username" placeholder="User Name">
 <input type="number" id="days" placeholder="Validity (Days)">
 <button onclick="generateKey()">Generate Key</button>
-<button onclick="logout()">Logout</button>
 </div>
 
 <div class="card">
 <h3>Active Keys</h3>
-<table width="100%">
+<table>
 <thead>
 <tr>
 <th>User</th>
@@ -99,117 +106,104 @@ button:hover{ background:#00cccc; }
 
 <script>
 
+// Supabase Config
 const supabase = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
 
+// LOGIN
 async function login(){
 
-    let email = document.getElementById("email").value;
-    let password = document.getElementById("password").value;
+let email = document.getElementById("loginEmail").value;
+let password = document.getElementById("loginPassword").value;
 
-    const { error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-    });
+const { data, error } = await supabase.auth.signInWithPassword({
+email: email,
+password: password
+});
 
-    if(error){
-        alert("Login Failed");
-        return;
-    }
-
-    checkRole();
+if(error){
+alert("Login Failed");
+return;
 }
 
-async function checkRole(){
+document.getElementById("loginSection").style.display="none";
+document.getElementById("mainPanel").style.display="block";
 
-    const { data: { user } } = await supabase.auth.getUser();
-
-    let { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-    if(data.role === "owner"){
-        document.getElementById("loginBox").classList.add("hidden");
-        document.getElementById("mainPanel").classList.remove("hidden");
-        loadKeys();
-    }else{
-        alert("Access Denied");
-    }
+loadKeys();
 }
 
-async function logout(){
-    await supabase.auth.signOut();
-    location.reload();
-}
-
+// Random Key
 function randomKey(){
-    return "LR-" + Math.floor(Math.random()*1000000);
+return "LR-" + Math.floor(Math.random()*1000000);
 }
 
+// Generate Key
 async function generateKey(){
 
-    let user = document.getElementById("username").value;
-    let days = parseInt(document.getElementById("days").value);
+let user = document.getElementById("username").value;
+let days = parseInt(document.getElementById("days").value);
 
-    if(user=="" || isNaN(days)){
-        alert("Fill all fields");
-        return;
-    }
-
-    let key = randomKey();
-    let expireDate = new Date();
-    expireDate.setDate(expireDate.getDate() + days);
-
-    await supabase.from("license_keys").insert([{
-        username:user,
-        license_key:key,
-        expire_date:expireDate,
-        status:"Active"
-    }]);
-
-    loadKeys();
+if(user=="" || isNaN(days)){
+alert("Fill all fields");
+return;
 }
 
+let key = randomKey();
+let expireDate = new Date();
+expireDate.setDate(expireDate.getDate() + days);
+
+await supabase.from("license_keys").insert([{
+username:user,
+license_key:key,
+expire_date:expireDate,
+status:"Active"
+}]);
+
+loadKeys();
+}
+
+// Load Keys
 async function loadKeys(){
 
-    let { data } = await supabase
-        .from("license_keys")
-        .select("*")
-        .order("id",{ascending:false});
+let { data } = await supabase
+.from("license_keys")
+.select("*")
+.order("id",{ascending:false});
 
-    let table = document.getElementById("keyTable");
-    table.innerHTML="";
+let table = document.getElementById("keyTable");
+table.innerHTML="";
 
-    data.forEach(k=>{
-        table.innerHTML += `
-        <tr>
-        <td>${k.username}</td>
-        <td>${k.license_key}</td>
-        <td>${new Date(k.expire_date).toLocaleDateString()}</td>
-        <td>${k.status}</td>
-        <td>
-        <button onclick="toggleStatus(${k.id},'${k.status}')">
-        ${k.status=="Active" ? "Block" : "Unblock"}
-        </button>
-        </td>
-        </tr>`;
-    });
+data.forEach(k=>{
+
+table.innerHTML += `
+<tr>
+<td>${k.username}</td>
+<td>${k.license_key}</td>
+<td>${new Date(k.expire_date).toLocaleDateString()}</td>
+<td class="${k.status=="Active" ? "status-active" : "status-block"}">${k.status}</td>
+<td>
+<button onclick="toggleStatus(${k.id},'${k.status}')">
+${k.status=="Active" ? "Block" : "Unblock"}
+</button>
+</td>
+</tr>
+`;
+});
 }
 
+// Toggle Status
 async function toggleStatus(id,current){
 
-    let newStatus = current=="Active" ? "Blocked" : "Active";
+let newStatus = current=="Active" ? "Blocked" : "Active";
 
-    await supabase
-        .from("license_keys")
-        .update({status:newStatus})
-        .eq("id",id);
+await supabase
+.from("license_keys")
+.update({status:newStatus})
+.eq("id",id);
 
-    loadKeys();
+loadKeys();
 }
 
 </script>
