@@ -65,10 +65,9 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <script>
 
-// ✅ SUPABASE INIT (CORRECT FOR v1)
-const supabase = supabase.createClient(
+const supabase = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
+"PASTE_YOUR_ANON_KEY_HERE"
 );
 
 // LOGIN
@@ -77,12 +76,12 @@ async function login(){
 let email = document.getElementById("loginEmail").value.trim();
 let password = document.getElementById("loginPassword").value.trim();
 
-if(email=="" || password==""){
+if(!email || !password){
 alert("Enter Email & Password");
 return;
 }
 
-const { user, session, error } = await supabase.auth.signIn({
+const { user, error } = await supabase.auth.signIn({
 email: email,
 password: password
 });
