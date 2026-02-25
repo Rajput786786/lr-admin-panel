@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <title>LR Owner Panel</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- SUPABASE v1 (IMPORTANT) -->
+<script src="https://unpkg.com/@supabase/supabase-js@1/dist/supabase.min.js"></script>
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
@@ -64,11 +65,13 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <script>
 
+// 🔐 SUPABASE INIT (v1 style)
 const supabase = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
 
+// LOGIN
 async function login(){
 
 let email = document.getElementById("loginEmail").value.trim();
@@ -79,7 +82,7 @@ alert("Enter Email & Password");
 return;
 }
 
-const { data, error } = await supabase.auth.signInWithPassword({
+const { user, error } = await supabase.auth.signIn({
 email: email,
 password: password
 });
@@ -97,10 +100,12 @@ document.getElementById("mainPanel").style.display="block";
 loadKeys();
 }
 
+// RANDOM KEY
 function randomKey(){
 return "LR-" + Math.floor(Math.random()*1000000);
 }
 
+// GENERATE KEY
 async function generateKey(){
 
 let user = document.getElementById("username").value;
@@ -115,16 +120,24 @@ let key = randomKey();
 let expireDate = new Date();
 expireDate.setDate(expireDate.getDate() + days);
 
-await supabase.from("license_keys").insert([{
+const { error } = await supabase
+.from("license_keys")
+.insert([{
 username:user,
 license_key:key,
 expire_date:expireDate,
 status:"Active"
 }]);
 
+if(error){
+alert("Insert Error: " + error.message);
+return;
+}
+
 loadKeys();
 }
 
+// LOAD KEYS
 async function loadKeys(){
 
 let { data, error } = await supabase
@@ -157,6 +170,7 @@ ${k.status=="Active" ? "Block" : "Unblock"}
 });
 }
 
+// TOGGLE STATUS
 async function toggleStatus(id,current){
 
 let newStatus = current=="Active" ? "Blocked" : "Active";
