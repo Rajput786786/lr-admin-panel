@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>LR Owner Panel</title>
 
-<!-- SUPABASE v1 (IMPORTANT) -->
+<!-- SUPABASE v1 -->
 <script src="https://unpkg.com/@supabase/supabase-js@1/dist/supabase.min.js"></script>
 
 <style>
@@ -65,8 +65,8 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <script>
 
-// 🔐 SUPABASE INIT (v1 style)
-const supabase = window.supabase.createClient(
+// ✅ SUPABASE INIT (CORRECT FOR v1)
+const supabase = supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
@@ -82,7 +82,7 @@ alert("Enter Email & Password");
 return;
 }
 
-const { user, error } = await supabase.auth.signIn({
+const { user, session, error } = await supabase.auth.signIn({
 email: email,
 password: password
 });
