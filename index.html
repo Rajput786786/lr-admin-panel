@@ -48,18 +48,7 @@ button{
     cursor:pointer;
 }
 button:hover{ background:#00cccc; }
-table{
-    width:100%;
-    margin-top:15px;
-    border-collapse:collapse;
-}
-th, td{
-    padding:10px;
-    text-align:center;
-    border-bottom:1px solid #333;
-}
-.status-active{ color:#00ff88; }
-.status-block{ color:red; }
+.hidden{ display:none; }
 </style>
 </head>
 
@@ -69,18 +58,28 @@ th, td{
 
 <div class="container">
 
+<!-- LOGIN -->
+<div class="card" id="loginBox">
+<h3>Login</h3>
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- MAIN PANEL -->
+<div class="hidden" id="mainPanel">
+
 <div class="card">
 <h3>Generate License Key</h3>
-
 <input type="text" id="username" placeholder="User Name">
 <input type="number" id="days" placeholder="Validity (Days)">
 <button onclick="generateKey()">Generate Key</button>
-
+<button onclick="logout()">Logout</button>
 </div>
 
 <div class="card">
 <h3>Active Keys</h3>
-<table>
+<table width="100%">
 <thead>
 <tr>
 <th>User</th>
@@ -96,20 +95,61 @@ th, td{
 
 </div>
 
+</div>
+
 <script>
 
-// 🔐 Supabase Config
 const supabase = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
 
-// Random Key
+async function login(){
+
+    let email = document.getElementById("email").value;
+    let password = document.getElementById("password").value;
+
+    const { error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+    });
+
+    if(error){
+        alert("Login Failed");
+        return;
+    }
+
+    checkRole();
+}
+
+async function checkRole(){
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+    if(data.role === "owner"){
+        document.getElementById("loginBox").classList.add("hidden");
+        document.getElementById("mainPanel").classList.remove("hidden");
+        loadKeys();
+    }else{
+        alert("Access Denied");
+    }
+}
+
+async function logout(){
+    await supabase.auth.signOut();
+    location.reload();
+}
+
 function randomKey(){
     return "LR-" + Math.floor(Math.random()*1000000);
 }
 
-// Generate Key
 async function generateKey(){
 
     let user = document.getElementById("username").value;
@@ -134,7 +174,6 @@ async function generateKey(){
     loadKeys();
 }
 
-// Load Keys
 async function loadKeys(){
 
     let { data } = await supabase
@@ -146,24 +185,21 @@ async function loadKeys(){
     table.innerHTML="";
 
     data.forEach(k=>{
-
         table.innerHTML += `
         <tr>
         <td>${k.username}</td>
         <td>${k.license_key}</td>
         <td>${new Date(k.expire_date).toLocaleDateString()}</td>
-        <td class="${k.status=="Active" ? "status-active" : "status-block"}">${k.status}</td>
+        <td>${k.status}</td>
         <td>
         <button onclick="toggleStatus(${k.id},'${k.status}')">
         ${k.status=="Active" ? "Block" : "Unblock"}
         </button>
         </td>
-        </tr>
-        `;
+        </tr>`;
     });
 }
 
-// Toggle Status
 async function toggleStatus(id,current){
 
     let newStatus = current=="Active" ? "Blocked" : "Active";
@@ -175,9 +211,6 @@ async function toggleStatus(id,current){
 
     loadKeys();
 }
-
-// Auto Load on Page Start
-loadKeys();
 
 </script>
 
