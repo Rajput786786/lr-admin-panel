@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>LR CONTROL PANEL</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -11,7 +10,7 @@ body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
 header{padding:20px;text-align:center;font-size:24px;background:#111;color:#00f5ff;}
 .container{padding:20px;}
 .card{background:#151528;padding:20px;border-radius:12px;margin-bottom:25px;box-shadow:0 0 20px #00f5ff33;}
-input{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
+input,select{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
 button{padding:10px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
 .main-btn{width:100%;background:#00f5ff;color:black;margin-top:10px;}
 .admin-btn{width:100%;background:#00ff9d;color:black;margin-top:10px;}
@@ -47,10 +46,18 @@ h3{color:#00f5ff;}
 <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
+<!-- OWNER PANEL -->
 <div class="card hidden" id="ownerPanel">
 <h3>OWNER PANEL</h3>
+
+<select id="keyTypeOwner">
+<option value="days">Days Key</option>
+<option value="hours">Hours Key</option>
+</select>
+
 <input type="text" id="ownerUser" placeholder="User Name">
-<input type="number" id="ownerDays" placeholder="Validity (Days)">
+<input type="number" id="ownerValidity" placeholder="Validity">
+<input type="text" id="ownerManualKey" placeholder="Manual Key (Optional)">
 <button class="main-btn" onclick="generateKey()">Generate Owner Key</button>
 
 <h4>All Keys</h4>
@@ -68,10 +75,18 @@ h3{color:#00f5ff;}
 </table>
 </div>
 
+<!-- ADMIN PANEL -->
 <div class="card hidden" id="adminPanel">
 <h3 class="admin-title">ADMIN PANEL</h3>
+
+<select id="keyTypeAdmin">
+<option value="days">Days Key</option>
+<option value="hours">Hours Key</option>
+</select>
+
 <input type="text" id="adminUser" placeholder="User Name">
-<input type="number" id="adminDays" placeholder="Validity (Days)">
+<input type="number" id="adminValidity" placeholder="Validity">
+<input type="text" id="adminManualKey" placeholder="Manual Key (Optional)">
 <button class="admin-btn" onclick="generateKey()">Generate Admin Key</button>
 
 <h4>Your Keys</h4>
@@ -148,19 +163,31 @@ location.reload();
 }
 
 function randomKey(){
-return "LR-"+Math.floor(Math.random()*999999);
+return "LR-"+Math.floor(100000+Math.random()*900000);
 }
 
 async function generateKey(){
-let user = currentRole==="owner"?ownerUser.value:adminUser.value;
-let days = currentRole==="owner"?ownerDays.value:adminDays.value;
-if(!user||!days){alert("Fill fields");return;}
 
-let expire=new Date(Date.now()+days*24*60*60*1000);
+let isOwner=currentRole==="owner";
+
+let user = isOwner?ownerUser.value:adminUser.value;
+let validity = isOwner?ownerValidity.value:adminValidity.value;
+let type = isOwner?keyTypeOwner.value:keyTypeAdmin.value;
+let manual = isOwner?ownerManualKey.value:adminManualKey.value;
+
+if(!user||!validity){alert("Fill fields");return;}
+
+let expire;
+
+if(type==="days"){
+expire=new Date(Date.now()+validity*24*60*60*1000);
+}else{
+expire=new Date(Date.now()+validity*60*60*1000);
+}
 
 await client.from("license_keys").insert([{
 username:user,
-license_key:randomKey(),
+license_key:manual?manual:randomKey(),
 expire_date:expire.toISOString(),
 status:"Active",
 created_by:currentUser.id
@@ -171,6 +198,9 @@ loadKeys();
 
 async function loadKeys(){
 
+keyTable.innerHTML="";
+keyTableAdmin.innerHTML="";
+
 let query=client.from("license_keys").select("*").order("id",{ascending:false});
 
 if(currentRole!=="owner"){
@@ -178,9 +208,6 @@ query=query.eq("created_by",currentUser.id);
 }
 
 let { data } = await query;
-
-keyTable.innerHTML="";
-keyTableAdmin.innerHTML="";
 
 data.forEach(k=>{
 let time=new Date(k.expire_date).toLocaleString("en-IN",{hour12:true});
@@ -202,6 +229,7 @@ ${k.status==="Active"?"Block":"Unblock"}
 if(currentRole==="owner"){
 keyTable.innerHTML+=row;
 }
+
 keyTableAdmin.innerHTML+=row;
 });
 }
