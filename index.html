@@ -79,9 +79,10 @@ const { createClient } = supabase;
 
 const client = createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"YOUR_ANON_KEY_HERE"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
+// SESSION CHECK
 document.addEventListener("DOMContentLoaded", async () => {
 const { data } = await client.auth.getSession();
 if(data.session){
@@ -134,18 +135,17 @@ let hours=parseInt(document.getElementById("hours").value);
 let days=parseInt(document.getElementById("days").value);
 
 if(!user){alert("Enter Username");return;}
-
 if(isNaN(hours)&&isNaN(days)){alert("Enter Hours or Days");return;}
 
 let key=customKey?customKey:randomKey();
 
 let now=new Date();
-let expireDate=new Date(now);
+let expireDate=new Date(now.getTime());
 
 if(!isNaN(hours)){
-expireDate.setTime(now.getTime() + hours*60*60*1000);
+expireDate.setTime(now.getTime() + (hours * 60 * 60 * 1000));
 }else{
-expireDate.setTime(now.getTime() + days*24*60*60*1000);
+expireDate.setTime(now.getTime() + (days * 24 * 60 * 60 * 1000));
 }
 
 const { error }=await client.from("license_keys").insert([{
@@ -177,10 +177,7 @@ table.innerHTML+=`
 <tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
-<td>${new Date(k.expire_date).toLocaleString('en-IN',{
-timeZone:'Asia/Kolkata',
-hour12:true
-})}</td>
+<td>${new Date(k.expire_date).toLocaleString()}</td>
 <td class="${k.status=="Active"?"status-active":"status-block"}">${k.status}</td>
 <td>
 <button class="block-btn" onclick="toggleStatus(${k.id},'${k.status}')">
@@ -201,11 +198,8 @@ loadKeys();
 }
 
 async function deleteKey(id){
-if(!confirm("Delete this key permanently?")) return;
-
-await client.from("license_keys").update({status:"Blocked"}).eq("id",id);
+if(!confirm("Delete this key?")) return;
 await client.from("license_keys").delete().eq("id",id);
-
 loadKeys();
 }
 
