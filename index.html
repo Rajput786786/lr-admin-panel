@@ -85,7 +85,8 @@ const client = createClient(
 document.addEventListener("DOMContentLoaded", async () => {
 const { data } = await client.auth.getSession();
 if(data.session){
-await checkOwner(data.session.user.id);
+showPanel();
+loadKeys();
 }
 });
 
@@ -95,18 +96,8 @@ let password=document.getElementById("loginPassword").value.trim();
 
 if(!email||!password){alert("Enter Email & Password");return;}
 
-const { data,error }=await client.auth.signInWithPassword({email,password});
+const { error }=await client.auth.signInWithPassword({email,password});
 if(error){alert(error.message);return;}
-
-await checkOwner(data.user.id);
-}
-
-async function checkOwner(uid){
-const { data,error }=await client.from("profiles").select("role").eq("id",uid).single();
-
-if(error||!data){alert("Profile not found");await client.auth.signOut();return;}
-
-if(data.role!=="owner"){alert("Owner Only");await client.auth.signOut();return;}
 
 showPanel();
 loadKeys();
@@ -133,24 +124,36 @@ let customKey=document.getElementById("customKey").value.trim();
 let hours=parseInt(document.getElementById("hours").value);
 let days=parseInt(document.getElementById("days").value);
 
-if(!user){alert("Enter Username");return;}
-
-if(isNaN(hours)&&isNaN(days)){alert("Enter Hours or Days");return;}
-
-let key=customKey?customKey:randomKey();
-
-let expireDate=new Date();
-
-if(!isNaN(hours)){
-expireDate.setHours(expireDate.getHours()+hours);
-}else{
-expireDate.setDate(expireDate.getDate()+days);
+if(!user){
+alert("Enter Username");
+return;
 }
 
-const { error }=await client.from("license_keys").insert([{
+if(isNaN(hours) && isNaN(days)){
+alert("Enter Hours or Days");
+return;
+}
+
+let key = customKey ? customKey : randomKey();
+
+let now = new Date();
+let expireDate = new Date(now.getTime());
+
+if(!isNaN(hours) && hours > 0){
+expireDate.setHours(expireDate.getHours() + hours);
+}
+else if(!isNaN(days) && days > 0){
+expireDate.setDate(expireDate.getDate() + days);
+}
+else{
+alert("Enter valid Hours or Days");
+return;
+}
+
+const { error } = await client.from("license_keys").insert([{
 username:user,
 license_key:key,
-expire_date:expireDate,
+expire_date:expireDate.toISOString(),
 status:"Active"
 }]);
 
@@ -197,6 +200,7 @@ loadKeys();
 }
 
 async function deleteKey(id){
+
 if(!confirm("Delete this key?")) return;
 
 await client.from("license_keys").update({status:"Blocked"}).eq("id",id);
