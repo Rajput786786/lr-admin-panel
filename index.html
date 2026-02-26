@@ -7,13 +7,12 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
-header{padding:25px;text-align:center;font-size:36px;font-weight:bold;background:#111;color:#00ffff;}
+header{padding:25px;text-align:center;font-size:34px;font-weight:bold;background:#111;color:#00ffff;}
 .container{padding:20px;max-width:1200px;margin:auto;}
 .card{background:#151528;padding:20px;border-radius:12px;margin-bottom:30px;box-shadow:0 0 25px #00f5ff22;}
 input,select{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
 button{padding:8px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
 .owner-btn{background:#00f5ff;color:black;}
-.admin-btn{background:#00ff9d;color:black;}
 .danger-btn{background:red;color:white;}
 .block-btn{background:#888;color:black;}
 .logout-btn{background:red;color:white;width:100%;}
@@ -48,13 +47,12 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
-<!-- OWNER KEY SECTION -->
-<div id="ownerSection" class="card hidden">
+<div id="generateSection" class="card hidden">
 <div class="section-title">GENERATE KEY</div>
 
 <input type="text" id="keyUser" placeholder="Username">
 <input type="text" id="manualKey" placeholder="Manual Key (Optional)">
-<input type="number" id="validity" placeholder="Validity">
+<input type="number" id="validityValue" placeholder="Validity">
 <select id="validityType">
 <option value="days">Days</option>
 <option value="hours">Hours</option>
@@ -68,14 +66,13 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 <th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th>
 </tr>
 </thead>
-<tbody id="keyTable"></tbody>
+<tbody id="myKeys"></tbody>
 </table>
 </div>
 
-<!-- ADMIN SECTION -->
-<div id="adminContainer" class="card hidden">
+<div id="adminSection" class="card hidden">
 <div class="section-title">ADMIN MANAGEMENT</div>
-<div id="adminSections"></div>
+<div id="adminList"></div>
 
 <div class="admin-box">
 <h3 style="color:#00ffff;">ADD NEW ADMIN</h3>
@@ -123,14 +120,14 @@ if(data.status==="blocked"){ alert("Blocked"); logout(); return; }
 
 loginSection.classList.add("hidden");
 mainPanel.classList.remove("hidden");
-ownerSection.classList.remove("hidden");
+generateSection.classList.remove("hidden");
+
+loadMyKeys();
 
 if(data.role==="owner"){
-adminContainer.classList.remove("hidden");
-loadAdminSections();
+adminSection.classList.remove("hidden");
+loadAdmins();
 }
-
-loadKeys();
 }
 
 async function logout(){
@@ -144,77 +141,59 @@ return "LR-"+Math.floor(100000+Math.random()*900000);
 
 async function generateKey(){
 
-let user=keyUser.value;
-let manual=manualKey.value;
-let val=parseInt(validity.value);
-let type=validityType.value;
+let username = keyUser.value;
+let manual = manualKey.value;
+let value = parseInt(validityValue.value);
+let type = validityType.value;
 
-if(!user||!val){alert("Fill fields");return;}
+if(!username || !value){ alert("Fill fields"); return; }
 
-let cost = type==="days" ? val*100 : val*10;
+let cost = 0;
+if(type==="days"){ cost = value*100; }
+if(type==="hours"){ cost = value*10; }
 
 if(currentProfile.role==="admin"){
 if(currentProfile.balance < cost){
-alert("Insufficient Balance");
+let possibleDays = Math.floor(currentProfile.balance/100);
+alert("Insufficient balance. You can create only "+possibleDays+" day key.");
 return;
 }
-await client.from("profiles").update({balance: currentProfile.balance-cost}).eq("id",currentUser.id);
+await client.from("profiles").update({balance:currentProfile.balance-cost}).eq("id",currentUser.id);
 currentProfile.balance -= cost;
 }
 
-let expire=new Date();
-if(type==="days"){ expire.setDate(expire.getDate()+val); }
-else{ expire.setHours(expire.getHours()+val); }
+let expire = new Date();
+if(type==="days"){ expire.setDate(expire.getDate()+value); }
+if(type==="hours"){ expire.setHours(expire.getHours()+value); }
 
 await client.from("license_keys").insert([{
-username:user,
-license_key: manual?manual:randomKey(),
+username:username,
+license_key:manual || randomKey(),
 expire_date:expire.toISOString(),
 status:"Active",
 created_by:currentUser.id
 }]);
 
-loadKeys();
-loadAdminSections();
+loadMyKeys();
+if(currentProfile.role==="owner"){ loadAdmins(); }
+
 }
 
-async function loadKeys(){
+async function loadMyKeys(){
 let { data } = await client.from("license_keys")
 .select("*").eq("created_by",currentUser.id)
 .order("id",{ascending:false});
 
-keyTable.innerHTML="";
-data.forEach(k=>keyTable.innerHTML+=rowTemplate(k));
+myKeys.innerHTML="";
+data.forEach(k=>myKeys.innerHTML+=rowTemplate(k,true));
 }
 
-function rowTemplate(k){
-let time=new Date(k.expire_date).toLocaleString("en-IN",{hour12:true});
-return `
-<tr>
-<td>${k.username}</td>
-<td>${k.license_key}</td>
-<td>${time}</td>
-<td class="${k.status==="Active"?"status-active":"status-block"}">${k.status}</td>
-<td>
-<button onclick="toggleKey(${k.id},'${k.status}')">
-${k.status==="Active"?"Block":"Unblock"}
-</button>
-</td>
-</tr>`;
-}
-
-async function toggleKey(id,status){
-let newStatus=status==="Active"?"Blocked":"Active";
-await client.from("license_keys").update({status:newStatus}).eq("id",id);
-loadKeys();
-}
-
-async function loadAdminSections(){
+async function loadAdmins(){
 
 let { data:admins } = await client.from("profiles")
 .select("*").eq("role","admin");
 
-adminSections.innerHTML="";
+adminList.innerHTML="";
 
 for(let admin of admins){
 
@@ -227,42 +206,99 @@ let blocked=keys.filter(k=>k.status==="Blocked").length;
 
 let section=`
 <div class="admin-box">
+
 <div class="big-email">${admin.email}
-<span class="balance">₹${admin.balance||0}</span>
+<span class="balance">₹${admin.balance||1000}</span>
 </div>
 <div class="clear"></div>
+
 Total Key: ${total}<br>
 Active Key: ${active}<br>
-Block Key: ${blocked}
-<br><br>
-<button onclick="blockAdmin('${admin.id}')">Block Admin</button>
+Blocked Key: ${blocked}
+
+<table>
+<thead>
+<tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th></tr>
+</thead>
+<tbody>
+`;
+
+keys.forEach(k=>section+=rowTemplate(k,false));
+
+section+=`
+</tbody></table>
+
+<button class="block-btn" onclick="toggleAdmin('${admin.id}','${admin.status}')">
+${admin.status==="blocked"?"Unblock":"Block"} Admin
+</button>
+
 <button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete Admin</button>
+
 </div>
 `;
 
-adminSections.innerHTML+=section;
+adminList.innerHTML+=section;
 }
 }
 
-async function blockAdmin(id){
-await client.from("profiles").update({status:"blocked"}).eq("id",id);
+function rowTemplate(k,isSelf){
+let time=new Date(k.expire_date).toLocaleString("en-IN",{hour12:true});
+return `
+<tr>
+<td>${k.username}</td>
+<td>${k.license_key}</td>
+<td>${time}</td>
+<td class="${k.status==="Active"?"status-active":"status-block"}">${k.status}</td>
+<td>
+<button class="block-btn" onclick="toggleKey(${k.id},'${k.status}')">
+${k.status==="Active"?"Block":"Unblock"}
+</button>
+<button class="danger-btn" onclick="deleteKey(${k.id})">Delete</button>
+</td>
+</tr>`;
+}
+
+async function toggleKey(id,status){
+let newStatus=status==="Active"?"Blocked":"Active";
+await client.from("license_keys").update({status:newStatus}).eq("id",id);
+loadMyKeys();
+if(currentProfile.role==="owner"){ loadAdmins(); }
+}
+
+async function toggleAdmin(id,status){
+
+let newStatus = status==="blocked"?"active":"blocked";
+
+await client.from("profiles").update({status:newStatus}).eq("id",id);
+
+if(newStatus==="blocked"){
 await client.from("license_keys").update({status:"Blocked"}).eq("created_by",id);
-loadAdminSections();
 }
 
-async function deleteAdmin(id){
+loadAdmins();
+}
+
+async function deleteKey(id){
+if(!confirm("Delete?"))return;
+await client.from("license_keys").delete().eq("id",id);
+loadMyKeys();
+if(currentProfile.role==="owner"){ loadAdmins(); }
+}
+
+async function deleteAdmin(adminId){
 if(!confirm("Delete Admin?"))return;
 
 await fetch("https://dpskhodrzlnqczibolug.supabase.co/functions/v1/delete-admin",{
 method:"POST",
 headers:{ "Content-Type":"application/json" },
-body:JSON.stringify({admin_id:id})
+body:JSON.stringify({admin_id:adminId})
 });
 
-loadAdminSections();
+loadAdmins();
 }
 
 async function addAdmin(){
+
 let email=newAdminEmail.value;
 let password=newAdminPassword.value;
 
@@ -279,8 +315,8 @@ balance:1000,
 status:"active"
 }]);
 
-alert("Admin Created");
-loadAdminSections();
+alert("Admin Created with ₹1000 balance");
+loadAdmins();
 }
 
 </script>
