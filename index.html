@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>LR Owner Panel</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@1/dist/supabase.min.js"></script>
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
@@ -17,6 +17,7 @@ table{width:100%;margin-top:15px;border-collapse:collapse;}
 th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 .status-active{color:#00ff88;}
 .status-block{color:red;}
+.logout-btn{background:red;color:white;}
 </style>
 </head>
 
@@ -34,6 +35,10 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 </div>
 
 <div id="mainPanel" style="display:none;">
+
+<div class="card">
+<button class="logout-btn" onclick="logout()">Logout</button>
+</div>
 
 <div class="card">
 <h3>Generate License Key</h3>
@@ -63,10 +68,19 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <script>
 
-const supabaseUrl = "https://dpskhodrzlnqczibolug.supabase.co";
-const supabaseKey = "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK";
+const client = window.supabase.createClient(
+"https://dpskhodrzlnqczibolug.supabase.co",
+"sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
+);
 
-const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+// ✅ SESSION CHECK ON LOAD
+window.onload = async function(){
+let session = client.auth.session();
+if(session){
+showPanel();
+loadKeys();
+}
+}
 
 // LOGIN
 async function login(){
@@ -79,7 +93,7 @@ alert("Enter Email & Password");
 return;
 }
 
-const { data, error } = await client.auth.signInWithPassword({
+const { user, error } = await client.auth.signIn({
 email: email,
 password: password
 });
@@ -90,11 +104,19 @@ return;
 }
 
 alert("Login Success");
+showPanel();
+loadKeys();
+}
 
+// LOGOUT
+async function logout(){
+await client.auth.signOut();
+location.reload();
+}
+
+function showPanel(){
 document.getElementById("loginSection").style.display="none";
 document.getElementById("mainPanel").style.display="block";
-
-loadKeys();
 }
 
 // RANDOM KEY
