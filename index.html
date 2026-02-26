@@ -12,12 +12,14 @@ header{padding:20px;text-align:center;font-size:24px;background:#111;color:#00ff
 .container{padding:20px;}
 .card{background:#1a1a2e;padding:20px;border-radius:10px;margin-bottom:20px;}
 input{padding:10px;margin:5px 0;width:100%;border:none;border-radius:5px;}
-button{padding:10px;margin-top:10px;width:100%;border:none;border-radius:5px;background:#00ffff;color:black;font-weight:bold;cursor:pointer;}
+button{padding:10px;margin-top:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;}
+.main-btn{width:100%;background:#00ffff;color:black;}
+.logout-btn{background:red;color:white;width:100%;}
+.delete-btn{background:#ff2e2e;color:white;}
 table{width:100%;margin-top:15px;border-collapse:collapse;}
 th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 .status-active{color:#00ff88;}
 .status-block{color:red;}
-.logout-btn{background:red;color:white;}
 </style>
 </head>
 
@@ -31,7 +33,7 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <h3>Login</h3>
 <input type="email" id="loginEmail" placeholder="Email">
 <input type="password" id="loginPassword" placeholder="Password">
-<button onclick="login()">Login</button>
+<button class="main-btn" onclick="login()">Login</button>
 </div>
 
 <div id="mainPanel" style="display:none;">
@@ -44,7 +46,7 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <h3>Generate License Key</h3>
 <input type="text" id="username" placeholder="User Name">
 <input type="number" id="days" placeholder="Validity (Days)">
-<button onclick="generateKey()">Generate Key</button>
+<button class="main-btn" onclick="generateKey()">Generate Key</button>
 </div>
 
 <div class="card">
@@ -56,7 +58,8 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <th>Key</th>
 <th>Expire</th>
 <th>Status</th>
-<th>Action</th>
+<th>Block</th>
+<th>Delete</th>
 </tr>
 </thead>
 <tbody id="keyTable"></tbody>
@@ -77,13 +80,11 @@ const client = createClient(
 
 // SESSION CHECK
 document.addEventListener("DOMContentLoaded", async () => {
-
-const { data: sessionData } = await client.auth.getSession();
-
-if(sessionData.session){
-await checkOwner(sessionData.session.user.id);
+const { data } = await client.auth.getSession();
+if(data.session){
+showPanel();
+loadKeys();
 }
-
 });
 
 // LOGIN
@@ -97,37 +98,10 @@ alert("Enter Email & Password");
 return;
 }
 
-const { data, error } = await client.auth.signInWithPassword({
-email,
-password
-});
+const { error } = await client.auth.signInWithPassword({ email, password });
 
 if(error){
 alert(error.message);
-return;
-}
-
-await checkOwner(data.user.id);
-}
-
-// OWNER VERIFY
-async function checkOwner(uid){
-
-const { data, error } = await client
-.from("profiles")
-.select("role")
-.eq("id", uid)
-.single();
-
-if(error || !data){
-alert("Profile not found");
-await client.auth.signOut();
-return;
-}
-
-if(data.role !== "owner"){
-alert("Access Denied. Owner Only.");
-await client.auth.signOut();
 return;
 }
 
@@ -211,12 +185,17 @@ table.innerHTML += `
 ${k.status=="Active" ? "Block" : "Unblock"}
 </button>
 </td>
+<td>
+<button class="delete-btn" onclick="deleteKey(${k.id})">
+Delete
+</button>
+</td>
 </tr>
 `;
 });
 }
 
-// TOGGLE STATUS
+// BLOCK / UNBLOCK
 async function toggleStatus(id,current){
 
 let newStatus = current=="Active" ? "Blocked" : "Active";
@@ -224,6 +203,21 @@ let newStatus = current=="Active" ? "Blocked" : "Active";
 await client
 .from("license_keys")
 .update({status:newStatus})
+.eq("id",id);
+
+loadKeys();
+}
+
+// DELETE KEY
+async function deleteKey(id){
+
+let confirmDelete = confirm("Delete this key permanently?");
+
+if(!confirmDelete) return;
+
+await client
+.from("license_keys")
+.delete()
 .eq("id",id);
 
 loadKeys();
