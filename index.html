@@ -46,7 +46,6 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
-<!-- GENERATE KEY -->
 <div class="card">
 <div class="section-title">GENERATE KEY</div>
 
@@ -71,13 +70,11 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 </table>
 </div>
 
-<!-- ADMIN MANAGEMENT -->
 <div class="card">
 <div class="section-title">ADMIN MANAGEMENT</div>
 <div id="adminList"></div>
 </div>
 
-<!-- ADD ADMIN -->
 <div class="card">
 <div class="section-title">ADD NEW ADMIN</div>
 <input type="email" id="newAdminEmail" placeholder="Admin Email">
@@ -92,7 +89,7 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 
 const client = supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
+"YOUR_ANON_KEY_HERE"
 );
 
 let currentUser;
@@ -140,12 +137,8 @@ let type=validityType.value;
 if(!user||!value){ alert("Fill fields"); return; }
 
 let expire=new Date();
-
-if(type==="days"){
-expire.setDate(expire.getDate()+value);
-}else{
-expire.setHours(expire.getHours()+value);
-}
+if(type==="days"){ expire.setDate(expire.getDate()+value); }
+else{ expire.setHours(expire.getHours()+value); }
 
 await client.from("license_keys").insert([{
 username:user,
@@ -218,21 +211,44 @@ let total=keys?keys.length:0;
 let active=keys?keys.filter(k=>k.status==="Active").length:0;
 let blocked=keys?keys.filter(k=>k.status==="Blocked").length:0;
 
+let keyTable="";
+if(keys){
+keys.forEach(k=>{
+keyTable+=`
+<tr>
+<td>${k.username}</td>
+<td>${k.license_key}</td>
+<td>${new Date(k.expire_date).toLocaleString()}</td>
+<td>${k.status}</td>
+<td>
+<button class="block-btn" onclick="toggleKey(${k.id},'${k.status}')">Toggle</button>
+<button class="danger-btn" onclick="deleteKey(${k.id})">Delete</button>
+</td>
+</tr>`;
+});
+}
+
 adminList.innerHTML+=`
 <div class="admin-box">
 
 <div class="big-email">
 ${admin.email}
-<span class="balance">₹${admin.balance||1000}</span>
+<span class="balance">₹${admin.balance}</span>
 </div>
 
-Total Key: ${total}<br>
-Active Key: ${active}<br>
-Blocked Key: ${blocked}
+Total: ${total} | Active: ${active} | Blocked: ${blocked}
 
-<br><br>
+<table>
+<tr>
+<th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th>
+</tr>
+${keyTable}
+</table>
 
-<button class="block-btn" onclick="toggleAdmin('${admin.id}','blocked')">Block Admin</button>
+<br>
+<button class="block-btn" onclick="toggleAdmin('${admin.id}','${admin.status}')">
+${admin.status==="blocked"?"Unblock":"Block"} Admin
+</button>
 <button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete Admin</button>
 
 </div>`;
@@ -241,9 +257,11 @@ Blocked Key: ${blocked}
 }
 
 async function toggleAdmin(id,status){
-await client.from("profiles").update({status:status}).eq("id",id);
+let newStatus=status==="blocked"?"active":"blocked";
 
-if(status==="blocked"){
+await client.from("profiles").update({status:newStatus}).eq("id",id);
+
+if(newStatus==="blocked"){
 await client.from("license_keys").update({status:"Blocked"}).eq("created_by",id);
 }
 
@@ -266,8 +284,6 @@ headers:{
 body:JSON.stringify({admin_id:adminId})
 });
 
-alert("Admin Deleted");
-
 loadAdmins();
 }
 
@@ -277,6 +293,13 @@ let email=newAdminEmail.value;
 let password=newAdminPassword.value;
 
 if(!email||!password){alert("Fill fields");return;}
+
+let { data:existing } = await client.from("profiles").select("*").eq("email",email);
+
+if(existing && existing.length>0){
+alert("Admin already exists");
+return;
+}
 
 const { data, error } = await client.auth.signUp({email,password});
 if(error){ alert(error.message); return; }
