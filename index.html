@@ -45,12 +45,10 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <div class="card">
 <h3>Generate License Key</h3>
-
 <input type="text" id="username" placeholder="User Name">
 <input type="text" id="customKey" placeholder="Custom Key (optional)">
 <input type="number" id="hours" placeholder="Validity (Hours)">
 <input type="number" id="days" placeholder="Validity (Days)">
-
 <button class="main-btn" onclick="generateKey()">Generate Key</button>
 </div>
 
@@ -82,32 +80,22 @@ const client = createClient(
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
-// SESSION CHECK
+// LOGIN CHECK
 document.addEventListener("DOMContentLoaded", async () => {
 const { data } = await client.auth.getSession();
 if(data.session){
-await checkOwner(data.session.user.id);
+showPanel();
+loadKeys();
 }
 });
 
 async function login(){
 let email=document.getElementById("loginEmail").value.trim();
 let password=document.getElementById("loginPassword").value.trim();
-
 if(!email||!password){alert("Enter Email & Password");return;}
 
-const { data,error }=await client.auth.signInWithPassword({email,password});
+const { error }=await client.auth.signInWithPassword({email,password});
 if(error){alert(error.message);return;}
-
-await checkOwner(data.user.id);
-}
-
-async function checkOwner(uid){
-const { data,error }=await client.from("profiles").select("role").eq("id",uid).single();
-
-if(error||!data){alert("Profile not found");await client.auth.signOut();return;}
-
-if(data.role!=="owner"){alert("Owner Only");await client.auth.signOut();return;}
 
 showPanel();
 loadKeys();
@@ -139,14 +127,16 @@ if(isNaN(hours)&&isNaN(days)){alert("Enter Hours or Days");return;}
 
 let key=customKey?customKey:randomKey();
 
-let now=new Date();
-let expireDate=new Date(now.getTime());
+let now=new Date().getTime();
+let expireTime;
 
 if(!isNaN(hours)){
-expireDate.setTime(now.getTime() + (hours * 60 * 60 * 1000));
+expireTime = now + (hours * 60 * 60 * 1000);
 }else{
-expireDate.setTime(now.getTime() + (days * 24 * 60 * 60 * 1000));
+expireTime = now + (days * 24 * 60 * 60 * 1000);
 }
+
+let expireDate = new Date(expireTime);
 
 const { error }=await client.from("license_keys").insert([{
 username:user,
@@ -173,11 +163,21 @@ let table=document.getElementById("keyTable");
 table.innerHTML="";
 
 data.forEach(k=>{
+
+let localTime = new Date(k.expire_date);
+
+let formatted =
+localTime.getDate().toString().padStart(2,"0") + "/" +
+(localTime.getMonth()+1).toString().padStart(2,"0") + "/" +
+localTime.getFullYear() + " " +
+localTime.getHours().toString().padStart(2,"0") + ":" +
+localTime.getMinutes().toString().padStart(2,"0");
+
 table.innerHTML+=`
 <tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
-<td>${new Date(k.expire_date).toLocaleString()}</td>
+<td>${formatted}</td>
 <td class="${k.status=="Active"?"status-active":"status-block"}">${k.status}</td>
 <td>
 <button class="block-btn" onclick="toggleStatus(${k.id},'${k.status}')">
