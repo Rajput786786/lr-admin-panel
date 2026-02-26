@@ -7,13 +7,12 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
-header{padding:25px;text-align:center;font-size:32px;font-weight:bold;background:#111;color:#00ffff;letter-spacing:2px;}
+header{padding:25px;text-align:center;font-size:34px;font-weight:bold;background:#111;color:#00ffff;letter-spacing:2px;}
 .container{padding:20px;max-width:1200px;margin:auto;}
 .card{background:#151528;padding:20px;border-radius:12px;margin-bottom:30px;box-shadow:0 0 25px #00f5ff22;}
 input,select{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
 button{padding:8px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
 .owner-btn{background:#00f5ff;color:black;}
-.admin-btn{background:#00ff9d;color:black;}
 .danger-btn{background:red;color:white;}
 .block-btn{background:#888;color:black;}
 .logout-btn{background:red;color:white;width:100%;}
@@ -22,11 +21,17 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 .status-active{color:#00ff9d;}
 .status-block{color:red;}
 .hidden{display:none;}
-.section-title{font-size:20px;font-weight:bold;margin-bottom:10px;}
-.admin-box{border:1px solid #00ff9d33;padding:15px;border-radius:10px;margin-top:20px;}
-.balance-box{float:right;font-size:14px;color:#00ff9d;}
+.section-title{font-size:22px;font-weight:bold;margin-bottom:15px;color:#00ffff;}
+.admin-box{
+background:#111122;
+border:1px solid #00ffff33;
+padding:20px;
+border-radius:12px;
+margin-top:20px;
+box-shadow:0 0 20px #00ffff22;
+}
+.balance{float:right;color:#00ff9d;font-weight:bold;}
 .clear{clear:both;}
-.small{font-size:12px;color:#aaa;}
 </style>
 </head>
 
@@ -59,7 +64,8 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 <option value="days">Days</option>
 <option value="hours">Hours</option>
 </select>
-<button class="owner-btn" onclick="generateKey('owner')">Generate Key</button>
+
+<button class="owner-btn" onclick="generateKey()">Generate Key</button>
 
 <table>
 <thead>
@@ -96,11 +102,6 @@ const client = createClient(
 let currentUser;
 let currentRole;
 
-document.addEventListener("DOMContentLoaded", async () => {
-const { data } = await client.auth.getSession();
-if(data.session){ initUser(); }
-});
-
 async function login(){
 const { error } = await client.auth.signInWithPassword({
 email:loginEmail.value,
@@ -119,6 +120,14 @@ let { data } = await client.from("profiles")
 .eq("id",user.id)
 .single();
 
+if(!data){ alert("Profile missing"); return; }
+
+if(data.status==="blocked"){
+alert("You are blocked");
+logout();
+return;
+}
+
 currentRole=data.role;
 
 loginSection.classList.add("hidden");
@@ -130,7 +139,9 @@ adminContainer.classList.remove("hidden");
 loadOwnerKeys();
 loadAdminSections();
 }else{
-loadAdminPanel();
+ownerSection.classList.remove("hidden");
+ownerSection.querySelector(".section-title").innerText="ADMIN PANEL";
+loadAdminOwnKeys();
 }
 }
 
@@ -143,28 +154,18 @@ function randomKey(){
 return "LR-"+Math.floor(100000+Math.random()*900000);
 }
 
-async function generateKey(type){
-
-let user, manualKey, validity, unit;
-
-if(type==="owner"){
-user=ownerUser.value;
-manualKey=ownerManualKey.value;
-validity=ownerValidity.value;
-unit=ownerType.value;
-}else{
-return;
-}
+async function generateKey(){
+let user=ownerUser.value;
+let manualKey=ownerManualKey.value;
+let validity=ownerValidity.value;
+let unit=ownerType.value;
 
 if(!user||!validity){alert("Fill fields");return;}
 
-let expire = new Date();
+let expire=new Date();
 
-if(unit==="days"){
-expire.setDate(expire.getDate()+parseInt(validity));
-}else{
-expire.setHours(expire.getHours()+parseInt(validity));
-}
+if(unit==="days") expire.setDate(expire.getDate()+parseInt(validity));
+else expire.setHours(expire.getHours()+parseInt(validity));
 
 await client.from("license_keys").insert([{
 username:user,
@@ -175,19 +176,27 @@ created_by:currentUser.id
 }]);
 
 loadOwnerKeys();
+loadAdminSections();
 }
 
 async function loadOwnerKeys(){
-
 let { data } = await client.from("license_keys")
 .select("*")
 .eq("created_by", currentUser.id)
 .order("id",{ascending:false});
 
 ownerKeys.innerHTML="";
-data.forEach(k=>{
-ownerKeys.innerHTML+=rowTemplate(k);
-});
+data.forEach(k=>ownerKeys.innerHTML+=rowTemplate(k));
+}
+
+async function loadAdminOwnKeys(){
+let { data } = await client.from("license_keys")
+.select("*")
+.eq("created_by", currentUser.id)
+.order("id",{ascending:false});
+
+ownerKeys.innerHTML="";
+data.forEach(k=>ownerKeys.innerHTML+=rowTemplate(k));
 }
 
 async function loadAdminSections(){
@@ -205,21 +214,25 @@ let { data:keys } = await client.from("license_keys")
 .eq("created_by", admin.id)
 .order("id",{ascending:false});
 
-let total = keys.length;
-let active = keys.filter(k=>k.status==="Active").length;
-let blocked = keys.filter(k=>k.status==="Blocked").length;
+let total=keys.length;
+let active=keys.filter(k=>k.status==="Active").length;
+let blocked=keys.filter(k=>k.status==="Blocked").length;
 
-let section = `
+let section=`
 <div class="admin-box">
-<div><b>${admin.email}</b>
-<span class="balance-box">Balance: ₹${admin.balance||0}</span>
+
+<h2 style="color:#ffcc00;font-size:22px;margin:0;">ADMIN PANEL</h2>
+<div style="color:#00ffff;font-size:18px;margin-bottom:10px;">
+${admin.email}
+<span class="balance">Balance: ₹${admin.balance||0}</span>
 </div>
-<div class="small">
-Total Key: ${total} |
-Active Key: ${active} |
+
+<div>
+Total Key: ${total}<br>
+Active Key: ${active}<br>
 Block Key: ${blocked}
 </div>
-<br>
+
 <table>
 <thead>
 <tr>
@@ -233,14 +246,14 @@ Block Key: ${blocked}
 <tbody>
 `;
 
-keys.forEach(k=>{
-section+=rowTemplate(k);
-});
+keys.forEach(k=>section+=rowTemplate(k));
 
 section+=`
 </tbody></table>
+
 <button class="block-btn" onclick="blockAdmin('${admin.id}')">Block Admin</button>
 <button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete Admin</button>
+
 </div>
 `;
 
