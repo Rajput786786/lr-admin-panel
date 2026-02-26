@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>LR Owner Panel</title>
+<title>LR Control Panel</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -10,23 +10,54 @@
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
 header{padding:20px;text-align:center;font-size:24px;background:#111;color:#00ffff;}
 .container{padding:20px;}
-.card{background:#1a1a2e;padding:20px;border-radius:10px;margin-bottom:20px;}
-input{padding:10px;margin:5px 0;width:100%;border:none;border-radius:5px;}
-button{padding:10px;margin-top:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;}
-.main-btn{width:100%;background:#00ffff;color:black;}
+
+.card{
+background:#1a1a2e;
+padding:20px;
+border-radius:10px;
+margin-bottom:20px;
+box-shadow:0 0 15px rgba(0,255,255,0.2);
+}
+
+.owner-title{color:#00ffff;}
+.admin-title{color:#39ffb6;}
+
+input{
+padding:10px;
+margin:5px 0;
+width:100%;
+border:none;
+border-radius:5px;
+background:#111;
+color:white;
+}
+
+button{
+padding:10px;
+margin-top:10px;
+border:none;
+border-radius:5px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.owner-btn{width:100%;background:#00ffff;color:black;}
+.admin-btn{width:100%;background:#39ffb6;color:black;}
 .block-btn{background:#999;color:black;}
 .delete-btn{background:red;color:white;margin-left:5px;}
 .logout-btn{background:red;color:white;width:100%;}
+
 table{width:100%;margin-top:15px;border-collapse:collapse;}
 th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 .status-active{color:#00ff88;}
 .status-block{color:red;}
+.balance-box{margin-top:10px;font-weight:bold;}
 </style>
 </head>
 
 <body>
 
-<header>LR OWNER PANEL</header>
+<header>LR CONTROL PANEL</header>
 
 <div class="container">
 
@@ -34,26 +65,25 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <h3>Login</h3>
 <input type="email" id="loginEmail" placeholder="Email">
 <input type="password" id="loginPassword" placeholder="Password">
-<button class="main-btn" onclick="login()">Login</button>
+<button class="owner-btn" onclick="login()">Login</button>
 </div>
 
 <div id="mainPanel" style="display:none;">
 
 <div class="card">
 <button class="logout-btn" onclick="logout()">Logout</button>
+<div class="balance-box" id="balanceInfo"></div>
 </div>
 
-<div class="card">
-<h3>Generate License Key</h3>
-<input type="text" id="username" placeholder="User Name">
-<input type="text" id="customKey" placeholder="Custom Key (optional)">
-<input type="number" id="hours" placeholder="Validity (Hours)">
-<input type="number" id="days" placeholder="Validity (Days)">
-<button class="main-btn" onclick="generateKey()">Generate Key</button>
-</div>
+<!-- OWNER PANEL -->
+<div class="card" id="ownerPanel" style="display:none;">
+<h3 class="owner-title">OWNER PANEL</h3>
 
-<div class="card">
-<h3>Active Keys</h3>
+<input type="text" id="ownerUsername" placeholder="User Name">
+<input type="number" id="ownerDays" placeholder="Validity (Days)">
+<button class="owner-btn" onclick="generateOwnerKey()">Generate Owner Key</button>
+
+<h4>Owner Keys</h4>
 <table>
 <thead>
 <tr>
@@ -64,7 +94,30 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <th>Action</th>
 </tr>
 </thead>
-<tbody id="keyTable"></tbody>
+<tbody id="ownerTable"></tbody>
+</table>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="card" id="adminPanel" style="display:none;">
+<h3 class="admin-title">ADMIN PANEL</h3>
+
+<input type="text" id="adminUsername" placeholder="User Name">
+<input type="number" id="adminDays" placeholder="Validity (Days)">
+<button class="admin-btn" onclick="generateAdminKey()">Generate Admin Key</button>
+
+<h4>Admin Keys</h4>
+<table>
+<thead>
+<tr>
+<th>User</th>
+<th>Key</th>
+<th>Expire</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="adminTable"></tbody>
 </table>
 </div>
 
@@ -77,28 +130,27 @@ const { createClient } = supabase;
 
 const client = createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
+"sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
 
-// LOGIN CHECK
+let currentUser=null;
+let currentProfile=null;
+
 document.addEventListener("DOMContentLoaded", async () => {
 const { data } = await client.auth.getSession();
 if(data.session){
+currentUser=data.session.user;
+await loadProfile();
 showPanel();
-loadKeys();
 }
 });
 
 async function login(){
-let email=document.getElementById("loginEmail").value.trim();
-let password=document.getElementById("loginPassword").value.trim();
-if(!email||!password){alert("Enter Email & Password");return;}
-
+let email=loginEmail.value.trim();
+let password=loginPassword.value.trim();
 const { error }=await client.auth.signInWithPassword({email,password});
 if(error){alert(error.message);return;}
-
-showPanel();
-loadKeys();
+location.reload();
 }
 
 async function logout(){
@@ -106,108 +158,134 @@ await client.auth.signOut();
 location.reload();
 }
 
+async function loadProfile(){
+const { data }=await client.from("profiles").select("*").eq("id",currentUser.id).single();
+currentProfile=data;
+
+balanceInfo.innerText="Balance: "+data.balance;
+
+if(data.role==="owner"){
+ownerPanel.style.display="block";
+adminPanel.style.display="block";
+}else{
+adminPanel.style.display="block";
+}
+loadKeys();
+}
+
 function showPanel(){
-document.getElementById("loginSection").style.display="none";
-document.getElementById("mainPanel").style.display="block";
+loginSection.style.display="none";
+mainPanel.style.display="block";
 }
 
 function randomKey(){
 return "LR-"+Math.floor(Math.random()*1000000);
 }
 
-async function generateKey(){
+async function generateOwnerKey(){
+let user=ownerUsername.value.trim();
+let days=parseInt(ownerDays.value);
+if(!user||isNaN(days))return alert("Fill all fields");
 
-let user=document.getElementById("username").value.trim();
-let customKey=document.getElementById("customKey").value.trim();
-let hours=parseInt(document.getElementById("hours").value);
-let days=parseInt(document.getElementById("days").value);
+let expire=new Date(Date.now()+days*24*60*60*1000);
 
-if(!user){alert("Enter Username");return;}
-if(isNaN(hours)&&isNaN(days)){alert("Enter Hours or Days");return;}
-
-let key=customKey?customKey:randomKey();
-
-// ✅ EXACT TIME SYSTEM
-let now = new Date().getTime();
-let expireTime;
-
-if(!isNaN(hours)){
-expireTime = now + (hours * 60 * 60 * 1000);
-}else{
-expireTime = now + (days * 24 * 60 * 60 * 1000);
-}
-
-let expireDate = new Date(expireTime);
-
-const { error }=await client.from("license_keys").insert([{
+await client.from("license_keys").insert([{
 username:user,
-license_key:key,
-expire_date:expireDate.toISOString(),
-status:"Active"
+license_key:randomKey(),
+expire_date:expire.toISOString(),
+status:"Active",
+created_by:currentUser.id
 }]);
 
-if(error){alert(error.message);return;}
-
 loadKeys();
+ownerUsername.value="";
+ownerDays.value="";
+}
 
-document.getElementById("username").value="";
-document.getElementById("customKey").value="";
-document.getElementById("hours").value="";
-document.getElementById("days").value="";
+async function generateAdminKey(){
+if(currentProfile.balance<=0)return alert("Balance Low");
+
+let user=adminUsername.value.trim();
+let days=parseInt(adminDays.value);
+if(!user||isNaN(days))return alert("Fill all fields");
+
+let expire=new Date(Date.now()+days*24*60*60*1000);
+
+await client.from("license_keys").insert([{
+username:user,
+license_key:randomKey(),
+expire_date:expire.toISOString(),
+status:"Active",
+created_by:currentUser.id
+}]);
+
+await client.from("profiles")
+.update({balance:currentProfile.balance-1})
+.eq("id",currentUser.id);
+
+loadProfile();
+adminUsername.value="";
+adminDays.value="";
 }
 
 async function loadKeys(){
-let { data,error }=await client.from("license_keys").select("*").order("id",{ascending:false});
-if(error){alert(error.message);return;}
 
-let table=document.getElementById("keyTable");
-table.innerHTML="";
+let { data }=await client.from("license_keys").select("*").order("id",{ascending:false});
+
+ownerTable.innerHTML="";
+adminTable.innerHTML="";
 
 data.forEach(k=>{
 
-let localTime = new Date(k.expire_date);
-
-// ✅ 12 hour format + AM/PM
-let formatted = localTime.toLocaleString("en-IN", {
-day: "2-digit",
-month: "2-digit",
-year: "numeric",
-hour: "2-digit",
-minute: "2-digit",
-hour12: true
+let formatted=new Date(k.expire_date).toLocaleString("en-IN",{
+day:"2-digit",
+month:"2-digit",
+year:"numeric",
+hour:"2-digit",
+minute:"2-digit",
+hour12:true
 });
 
-table.innerHTML+=`
+let row=`
 <tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
 <td>${formatted}</td>
-<td class="${k.status=="Active"?"status-active":"status-block"}">${k.status}</td>
+<td class="${k.status==="Active"?"status-active":"status-block"}">${k.status}</td>
 <td>
 <button class="block-btn" onclick="toggleStatus(${k.id},'${k.status}')">
-${k.status=="Active"?"Block":"Unblock"}
+${k.status==="Active"?"Block":"Unblock"}
 </button>
-<button class="delete-btn" onclick="deleteKey(${k.id})">
-Delete
-</button>
+<button class="delete-btn" onclick="deleteKey(${k.id})">Delete</button>
 </td>
 </tr>`;
+
+if(currentProfile.role==="owner"){
+if(k.created_by===currentUser.id){
+ownerTable.innerHTML+=row;
+}else{
+adminTable.innerHTML+=row;
+}
+}else{
+if(k.created_by===currentUser.id){
+adminTable.innerHTML+=row;
+}
+}
 });
 }
 
 async function toggleStatus(id,current){
-let newStatus=current=="Active"?"Blocked":"Active";
+let newStatus=current==="Active"?"Blocked":"Active";
 await client.from("license_keys").update({status:newStatus}).eq("id",id);
 loadKeys();
 }
 
 async function deleteKey(id){
-if(!confirm("Delete this key?")) return;
+if(!confirm("Delete this key?"))return;
 await client.from("license_keys").delete().eq("id",id);
 loadKeys();
 }
 
 </script>
-
 </body>
 </html>
