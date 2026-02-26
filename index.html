@@ -14,8 +14,9 @@ header{padding:20px;text-align:center;font-size:24px;background:#111;color:#00ff
 input{padding:10px;margin:5px 0;width:100%;border:none;border-radius:5px;}
 button{padding:10px;margin-top:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;}
 .main-btn{width:100%;background:#00ffff;color:black;}
+.block-btn{background:#999;color:black;}
+.delete-btn{background:red;color:white;margin-left:5px;}
 .logout-btn{background:red;color:white;width:100%;}
-.delete-btn{background:#ff2e2e;color:white;}
 table{width:100%;margin-top:15px;border-collapse:collapse;}
 th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 .status-active{color:#00ff88;}
@@ -44,8 +45,12 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <div class="card">
 <h3>Generate License Key</h3>
+
 <input type="text" id="username" placeholder="User Name">
+<input type="text" id="customKey" placeholder="Custom Key (optional)">
+<input type="number" id="hours" placeholder="Validity (Hours)">
 <input type="number" id="days" placeholder="Validity (Days)">
+
 <button class="main-btn" onclick="generateKey()">Generate Key</button>
 </div>
 
@@ -58,8 +63,7 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <th>Key</th>
 <th>Expire</th>
 <th>Status</th>
-<th>Block</th>
-<th>Delete</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody id="keyTable"></tbody>
@@ -78,38 +82,36 @@ const client = createClient(
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
-// SESSION CHECK
 document.addEventListener("DOMContentLoaded", async () => {
 const { data } = await client.auth.getSession();
 if(data.session){
-showPanel();
-loadKeys();
+await checkOwner(data.session.user.id);
 }
 });
 
-// LOGIN
 async function login(){
+let email=document.getElementById("loginEmail").value.trim();
+let password=document.getElementById("loginPassword").value.trim();
 
-let email = document.getElementById("loginEmail").value.trim();
-let password = document.getElementById("loginPassword").value.trim();
+if(!email||!password){alert("Enter Email & Password");return;}
 
-if(!email || !password){
-alert("Enter Email & Password");
-return;
+const { data,error }=await client.auth.signInWithPassword({email,password});
+if(error){alert(error.message);return;}
+
+await checkOwner(data.user.id);
 }
 
-const { error } = await client.auth.signInWithPassword({ email, password });
+async function checkOwner(uid){
+const { data,error }=await client.from("profiles").select("role").eq("id",uid).single();
 
-if(error){
-alert(error.message);
-return;
-}
+if(error||!data){alert("Profile not found");await client.auth.signOut();return;}
+
+if(data.role!=="owner"){alert("Owner Only");await client.auth.signOut();return;}
 
 showPanel();
 loadKeys();
 }
 
-// LOGOUT
 async function logout(){
 await client.auth.signOut();
 location.reload();
@@ -120,105 +122,85 @@ document.getElementById("loginSection").style.display="none";
 document.getElementById("mainPanel").style.display="block";
 }
 
-// RANDOM KEY
 function randomKey(){
-return "LR-" + Math.floor(Math.random()*1000000);
+return "LR-"+Math.floor(Math.random()*1000000);
 }
 
-// GENERATE KEY
 async function generateKey(){
 
-let user = document.getElementById("username").value.trim();
-let days = parseInt(document.getElementById("days").value);
+let user=document.getElementById("username").value.trim();
+let customKey=document.getElementById("customKey").value.trim();
+let hours=parseInt(document.getElementById("hours").value);
+let days=parseInt(document.getElementById("days").value);
 
-if(!user || isNaN(days)){
-alert("Fill all fields");
-return;
+if(!user){alert("Enter Username");return;}
+
+if(isNaN(hours)&&isNaN(days)){alert("Enter Hours or Days");return;}
+
+let key=customKey?customKey:randomKey();
+
+let expireDate=new Date();
+
+if(!isNaN(hours)){
+expireDate.setHours(expireDate.getHours()+hours);
+}else{
+expireDate.setDate(expireDate.getDate()+days);
 }
 
-let key = randomKey();
-let expireDate = new Date();
-expireDate.setDate(expireDate.getDate() + days);
-
-const { error } = await client
-.from("license_keys")
-.insert([{
+const { error }=await client.from("license_keys").insert([{
 username:user,
 license_key:key,
 expire_date:expireDate,
 status:"Active"
 }]);
 
-if(error){
-alert(error.message);
-return;
-}
+if(error){alert(error.message);return;}
 
 loadKeys();
+
+document.getElementById("username").value="";
+document.getElementById("customKey").value="";
+document.getElementById("hours").value="";
+document.getElementById("days").value="";
 }
 
-// LOAD KEYS
 async function loadKeys(){
+let { data,error }=await client.from("license_keys").select("*").order("id",{ascending:false});
+if(error){alert(error.message);return;}
 
-let { data, error } = await client
-.from("license_keys")
-.select("*")
-.order("id",{ascending:false});
-
-if(error){
-alert(error.message);
-return;
-}
-
-let table = document.getElementById("keyTable");
+let table=document.getElementById("keyTable");
 table.innerHTML="";
 
 data.forEach(k=>{
-table.innerHTML += `
+table.innerHTML+=`
 <tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
-<td>${new Date(k.expire_date).toLocaleDateString()}</td>
-<td class="${k.status=="Active" ? "status-active" : "status-block"}">${k.status}</td>
+<td>${new Date(k.expire_date).toLocaleString()}</td>
+<td class="${k.status=="Active"?"status-active":"status-block"}">${k.status}</td>
 <td>
-<button onclick="toggleStatus(${k.id},'${k.status}')">
-${k.status=="Active" ? "Block" : "Unblock"}
+<button class="block-btn" onclick="toggleStatus(${k.id},'${k.status}')">
+${k.status=="Active"?"Block":"Unblock"}
 </button>
-</td>
-<td>
 <button class="delete-btn" onclick="deleteKey(${k.id})">
 Delete
 </button>
 </td>
-</tr>
-`;
+</tr>`;
 });
 }
 
-// BLOCK / UNBLOCK
 async function toggleStatus(id,current){
-
-let newStatus = current=="Active" ? "Blocked" : "Active";
-
-await client
-.from("license_keys")
-.update({status:newStatus})
-.eq("id",id);
-
+let newStatus=current=="Active"?"Blocked":"Active";
+await client.from("license_keys").update({status:newStatus}).eq("id",id);
 loadKeys();
 }
 
-// DELETE KEY
 async function deleteKey(id){
+if(!confirm("Delete this key?")) return;
 
-let confirmDelete = confirm("Delete this key permanently?");
-
-if(!confirmDelete) return;
-
-await client
-.from("license_keys")
-.delete()
-.eq("id",id);
+await client.from("license_keys").update({status:"Blocked"}).eq("id",id);
+await client.from("license_keys").delete().eq("id",id);
 
 loadKeys();
 }
