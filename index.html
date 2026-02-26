@@ -127,7 +127,8 @@ if(isNaN(hours)&&isNaN(days)){alert("Enter Hours or Days");return;}
 
 let key=customKey?customKey:randomKey();
 
-let now=new Date().getTime();
+// ✅ EXACT TIME SYSTEM
+let now = new Date().getTime();
 let expireTime;
 
 if(!isNaN(hours)){
@@ -166,12 +167,15 @@ data.forEach(k=>{
 
 let localTime = new Date(k.expire_date);
 
-let formatted =
-localTime.getDate().toString().padStart(2,"0") + "/" +
-(localTime.getMonth()+1).toString().padStart(2,"0") + "/" +
-localTime.getFullYear() + " " +
-localTime.getHours().toString().padStart(2,"0") + ":" +
-localTime.getMinutes().toString().padStart(2,"0");
+// ✅ 12 hour format + AM/PM
+let formatted = localTime.toLocaleString("en-IN", {
+day: "2-digit",
+month: "2-digit",
+year: "numeric",
+hour: "2-digit",
+minute: "2-digit",
+hour12: true
+});
 
 table.innerHTML+=`
 <tr>
