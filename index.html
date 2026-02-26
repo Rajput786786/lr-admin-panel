@@ -10,11 +10,10 @@ body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
 header{padding:25px;text-align:center;font-size:34px;font-weight:bold;background:#111;color:#00ffff;}
 .container{padding:20px;max-width:1200px;margin:auto;}
 .card{background:#151528;padding:20px;border-radius:12px;margin-bottom:30px;box-shadow:0 0 25px #00f5ff22;}
-input,select{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
+input{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
 button{padding:8px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
 .owner-btn{background:#00f5ff;color:black;}
 .danger-btn{background:red;color:white;}
-.block-btn{background:#888;color:black;}
 .logout-btn{background:red;color:white;width:100%;}
 table{width:100%;margin-top:15px;border-collapse:collapse;}
 th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;}
@@ -23,8 +22,6 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 .hidden{display:none;}
 .section-title{font-size:22px;font-weight:bold;margin-bottom:15px;color:#00ffff;}
 .admin-box{background:#111122;border:1px solid #00ffff33;padding:20px;border-radius:12px;margin-top:20px;}
-.balance{float:right;color:#00ff9d;font-weight:bold;}
-.clear{clear:both;}
 .big-email{color:#ffcc00;font-size:18px;font-weight:bold;}
 </style>
 </head>
@@ -47,9 +44,8 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
-<!-- OWNER KEYS -->
 <div id="ownerSection" class="card hidden">
-<div class="section-title">OWNER KEYS</div>
+<div class="section-title">OWNER PANEL</div>
 
 <input type="text" id="ownerUser" placeholder="User">
 <input type="number" id="ownerValidity" placeholder="Validity Days">
@@ -65,12 +61,10 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 </table>
 </div>
 
-<!-- ADMIN SECTIONS -->
 <div id="adminContainer" class="card hidden">
 <div class="section-title">ADMIN SECTIONS</div>
 <div id="adminSections"></div>
 
-<!-- ADD NEW ADMIN -->
 <div class="admin-box">
 <h3 style="color:#00ffff;">ADD NEW ADMIN</h3>
 <input type="email" id="newAdminEmail" placeholder="Admin Email">
@@ -79,21 +73,25 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 </div>
 
 </div>
-
 </div>
 </div>
 
 <script>
 
-const { createClient } = supabase;
-
-const client = createClient(
+const client = supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
 let currentUser;
 let currentProfile;
+
+/* AUTO SESSION FIX */
+client.auth.getSession().then(({data})=>{
+if(data.session){
+initUser();
+}
+});
 
 async function login(){
 const { error } = await client.auth.signInWithPassword({
@@ -120,16 +118,14 @@ return;
 loginSection.classList.add("hidden");
 mainPanel.classList.remove("hidden");
 
+ownerSection.classList.remove("hidden");
+
 if(data.role==="owner"){
-ownerSection.classList.remove("hidden");
 adminContainer.classList.remove("hidden");
-loadOwnerKeys();
 loadAdminSections();
-}else{
-ownerSection.classList.remove("hidden");
-ownerSection.querySelector(".section-title").innerText="ADMIN PANEL";
-loadAdminOwnKeys();
 }
+
+loadOwnerKeys();
 }
 
 async function logout(){
@@ -170,15 +166,6 @@ ownerKeys.innerHTML="";
 data.forEach(k=>ownerKeys.innerHTML+=rowTemplate(k));
 }
 
-async function loadAdminOwnKeys(){
-let { data } = await client.from("license_keys")
-.select("*").eq("created_by",currentUser.id)
-.order("id",{ascending:false});
-
-ownerKeys.innerHTML="";
-data.forEach(k=>ownerKeys.innerHTML+=rowTemplate(k));
-}
-
 async function loadAdminSections(){
 
 let { data:admins } = await client.from("profiles")
@@ -188,45 +175,11 @@ adminSections.innerHTML="";
 
 for(let admin of admins){
 
-let { data:keys } = await client.from("license_keys")
-.select("*").eq("created_by",admin.id);
-
-let total=keys.length;
-let active=keys.filter(k=>k.status==="Active").length;
-let blocked=keys.filter(k=>k.status==="Blocked").length;
-
-let toggleBtn = admin.status==="blocked"
-? `<button class="owner-btn" onclick="toggleAdmin('${admin.id}','active')">Unblock Admin</button>`
-: `<button class="block-btn" onclick="toggleAdmin('${admin.id}','blocked')">Block Admin</button>`;
-
 let section=`
 <div class="admin-box">
-
-<div class="big-email">${admin.email}
-<span class="balance">Balance: ₹${admin.balance||0}</span>
-</div>
-
-<div>
-Total Key: ${total}<br>
-Active Key: ${active}<br>
-Block Key: ${blocked}
-</div>
-
-<table>
-<thead>
-<tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th></tr>
-</thead>
-<tbody>
-`;
-
-keys.forEach(k=>section+=rowTemplate(k));
-
-section+=`
-</tbody></table>
-${toggleBtn}
+<div class="big-email">${admin.email}</div>
 <button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete Admin</button>
-</div>
-`;
+</div>`;
 
 adminSections.innerHTML+=section;
 }
@@ -241,42 +194,26 @@ return `
 <td>${time}</td>
 <td class="${k.status==="Active"?"status-active":"status-block"}">${k.status}</td>
 <td>
-<button class="block-btn" onclick="toggleKey(${k.id},'${k.status}')">
-${k.status==="Active"?"Block":"Unblock"}
-</button>
 <button class="danger-btn" onclick="deleteKey(${k.id})">Delete</button>
 </td>
 </tr>`;
-}
-
-async function toggleKey(id,status){
-let newStatus=status==="Active"?"Blocked":"Active";
-await client.from("license_keys").update({status:newStatus}).eq("id",id);
-loadOwnerKeys();
-loadAdminSections();
-}
-
-async function toggleAdmin(id,status){
-await client.from("profiles").update({status:status}).eq("id",id);
-
-if(status==="blocked"){
-await client.from("license_keys").update({status:"Blocked"}).eq("created_by",id);
-}
-
-loadAdminSections();
 }
 
 async function deleteKey(id){
 if(!confirm("Delete?"))return;
 await client.from("license_keys").delete().eq("id",id);
 loadOwnerKeys();
-loadAdminSections();
 }
 
-async function deleteAdmin(id){
+async function deleteAdmin(adminId){
 if(!confirm("Delete Admin?"))return;
-await client.from("license_keys").delete().eq("created_by",id);
-await client.from("profiles").delete().eq("id",id);
+
+await fetch("https://dpskhodrzlnqczibolug.supabase.co/functions/v1/delete-admin",{
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body:JSON.stringify({admin_id:adminId})
+});
+
 loadAdminSections();
 }
 
@@ -294,17 +231,13 @@ await client.from("profiles").insert([{
 id:data.user.id,
 email:email,
 role:"admin",
-balance:0,
 status:"active"
 }]);
 
 alert("Admin Created");
-newAdminEmail.value="";
-newAdminPassword.value="";
 loadAdminSections();
 }
 
 </script>
-
 </body>
 </html>
