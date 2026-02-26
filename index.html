@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>LR Owner Panel</title>
 
-<script src="https://unpkg.com/@supabase/supabase-js@1/dist/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
@@ -63,11 +63,10 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <script>
 
-// ✅ FIXED INIT
-const client = window.supabase.createClient(
-"https://dpskhodrzlnqczibolug.supabase.co",
-"sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
-);
+const supabaseUrl = "https://dpskhodrzlnqczibolug.supabase.co";
+const supabaseKey = "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK";
+
+const client = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // LOGIN
 async function login(){
@@ -80,7 +79,7 @@ alert("Enter Email & Password");
 return;
 }
 
-const { user, error } = await client.auth.signIn({
+const { data, error } = await client.auth.signInWithPassword({
 email: email,
 password: password
 });
