@@ -7,12 +7,13 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
-header{padding:25px;text-align:center;font-size:34px;font-weight:bold;background:#111;color:#00ffff;}
+header{padding:25px;text-align:center;font-size:36px;font-weight:bold;background:#111;color:#00ffff;}
 .container{padding:20px;max-width:1200px;margin:auto;}
-.card{background:#151528;padding:20px;border-radius:12px;margin-bottom:30px;box-shadow:0 0 25px #00f5ff22;}
+.card{background:#151528;padding:20px;border-radius:12px;margin-bottom:25px;box-shadow:0 0 20px #00f5ff22;}
 input,select{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
 button{padding:8px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
 .owner-btn{background:#00f5ff;color:black;}
+.admin-btn{background:#00ff9d;color:black;}
 .danger-btn{background:red;color:white;}
 .block-btn{background:#888;color:black;}
 .logout-btn{background:red;color:white;width:100%;}
@@ -25,12 +26,13 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 .admin-box{background:#111122;border:1px solid #00ffff33;padding:20px;border-radius:12px;margin-top:20px;}
 .big-email{color:#ffcc00;font-size:18px;font-weight:bold;}
 .balance{float:right;color:#00ff9d;font-weight:bold;}
+.clear{clear:both;}
 </style>
 </head>
 
 <body>
 
-<header>LR OWNER PANEL</header>
+<header>LR CONTROL PANEL</header>
 
 <div class="container">
 
@@ -66,16 +68,16 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 <th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th>
 </tr>
 </thead>
-<tbody id="ownerKeys"></tbody>
+<tbody id="keyTable"></tbody>
 </table>
 </div>
 
-<div class="card">
+<div class="card hidden" id="adminSection">
 <div class="section-title">ADMIN MANAGEMENT</div>
 <div id="adminList"></div>
 </div>
 
-<div class="card">
+<div class="card hidden" id="addAdminSection">
 <div class="section-title">ADD NEW ADMIN</div>
 <input type="email" id="newAdminEmail" placeholder="Admin Email">
 <input type="password" id="newAdminPassword" placeholder="Admin Password">
@@ -93,6 +95,7 @@ const client = supabase.createClient(
 );
 
 let currentUser;
+let currentProfile;
 
 client.auth.getSession().then(({data})=>{
 if(data.session){ initUser(); }
@@ -111,11 +114,25 @@ async function initUser(){
 const { data:{user} } = await client.auth.getUser();
 currentUser=user;
 
+let { data } = await client.from("profiles").select("*").eq("id",user.id).single();
+currentProfile=data;
+
+if(data.status==="blocked"){
+alert("You are blocked");
+logout();
+return;
+}
+
 loginSection.classList.add("hidden");
 mainPanel.classList.remove("hidden");
 
-loadOwnerKeys();
+loadKeys();
+
+if(data.role==="owner"){
+adminSection.classList.remove("hidden");
+addAdminSection.classList.remove("hidden");
 loadAdmins();
+}
 }
 
 async function logout(){
@@ -136,13 +153,22 @@ let type=validityType.value;
 
 if(!user||!value){ alert("Fill fields"); return; }
 
-let expire=new Date();
+let cost = type==="days" ? value*100 : value*10;
 
-if(type==="days"){
-expire.setDate(expire.getDate()+value);
-}else{
-expire.setHours(expire.getHours()+value);
+if(currentProfile.role==="admin"){
+if(currentProfile.balance < cost){
+alert("Insufficient Balance");
+return;
 }
+await client.from("profiles")
+.update({balance: currentProfile.balance - cost})
+.eq("id",currentUser.id);
+currentProfile.balance -= cost;
+}
+
+let expire=new Date();
+if(type==="days"){ expire.setDate(expire.getDate()+value); }
+else{ expire.setHours(expire.getHours()+value); }
 
 await client.from("license_keys").insert([{
 username:user,
@@ -152,20 +178,21 @@ status:"Active",
 created_by:currentUser.id
 }]);
 
-loadOwnerKeys();
-loadAdmins();
+loadKeys();
+if(currentProfile.role==="owner"){ loadAdmins(); }
 }
 
-async function loadOwnerKeys(){
+async function loadKeys(){
+
 let { data } = await client.from("license_keys")
 .select("*")
 .eq("created_by",currentUser.id)
 .order("id",{ascending:false});
 
-ownerKeys.innerHTML="";
+keyTable.innerHTML="";
 if(data){
 data.forEach(k=>{
-ownerKeys.innerHTML+=`
+keyTable.innerHTML+=`
 <tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
@@ -185,15 +212,15 @@ ${k.status==="Active"?"Block":"Unblock"}
 async function toggleKey(id,status){
 let newStatus=status==="Active"?"Blocked":"Active";
 await client.from("license_keys").update({status:newStatus}).eq("id",id);
-loadOwnerKeys();
-loadAdmins();
+loadKeys();
+if(currentProfile.role==="owner"){ loadAdmins(); }
 }
 
 async function deleteKey(id){
 if(!confirm("Delete?")) return;
 await client.from("license_keys").delete().eq("id",id);
-loadOwnerKeys();
-loadAdmins();
+loadKeys();
+if(currentProfile.role==="owner"){ loadAdmins(); }
 }
 
 async function loadAdmins(){
@@ -217,35 +244,33 @@ let blocked=keys?keys.filter(k=>k.status==="Blocked").length:0;
 
 adminList.innerHTML+=`
 <div class="admin-box">
-
-<div class="big-email">
-${admin.email}
-<span class="balance">₹${admin.balance||1000}</span>
+<div class="big-email">${admin.email}
+<span class="balance">₹${admin.balance}</span>
 </div>
-
 Total Key: ${total}<br>
 Active Key: ${active}<br>
-Blocked Key: ${blocked}
-
-<br><br>
-
-<button class="block-btn" onclick="toggleAdmin('${admin.id}','blocked')">Block Admin</button>
-<button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete Admin</button>
-
+Blocked Key: ${blocked}<br><br>
+<button class="block-btn" onclick="toggleAdmin('${admin.id}','blocked')">Block</button>
+<button class="owner-btn" onclick="toggleAdmin('${admin.id}','active')">Unblock</button>
+<button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete</button>
 </div>`;
 }
 }
 }
 
 async function toggleAdmin(id,status){
+
 await client.from("profiles").update({status:status}).eq("id",id);
+
 if(status==="blocked"){
 await client.from("license_keys").update({status:"Blocked"}).eq("created_by",id);
 }
+
 loadAdmins();
 }
 
 async function deleteAdmin(adminId){
+
 if(!confirm("Delete Admin?")) return;
 
 const { data: sessionData } = await client.auth.getSession();
@@ -271,7 +296,6 @@ let password=newAdminPassword.value;
 if(!email||!password){alert("Fill fields");return;}
 
 let { data:existing } = await client.from("profiles").select("*").eq("email",email);
-
 if(existing && existing.length>0){
 alert("Admin already exists");
 return;
