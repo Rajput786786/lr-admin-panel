@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>LR Owner Panel</title>
 
-<!-- SUPABASE V2 -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -28,7 +27,6 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <div class="container">
 
-<!-- LOGIN -->
 <div class="card" id="loginSection">
 <h3>Login</h3>
 <input type="email" id="loginEmail" placeholder="Email">
@@ -36,7 +34,6 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <button onclick="login()">Login</button>
 </div>
 
-<!-- MAIN PANEL -->
 <div id="mainPanel" style="display:none;">
 
 <div class="card">
@@ -71,7 +68,6 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <script>
 
-// SUPABASE INIT
 const { createClient } = supabase;
 
 const client = createClient(
@@ -79,21 +75,17 @@ const client = createClient(
 "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
 
-// CHECK SESSION ON LOAD
+// SESSION CHECK
 document.addEventListener("DOMContentLoaded", async () => {
-
 const { data } = await client.auth.getSession();
-
 if(data.session){
 showPanel();
 loadKeys();
 }
-
 });
 
 // LOGIN
 async function login(){
-
 let email = document.getElementById("loginEmail").value.trim();
 let password = document.getElementById("loginPassword").value.trim();
 
@@ -103,16 +95,14 @@ return;
 }
 
 const { error } = await client.auth.signInWithPassword({
-email: email,
-password: password
+email,
+password
 });
 
 if(error){
-alert("Login Failed: " + error.message);
+alert(error.message);
 return;
 }
-
-alert("Login Success");
 
 showPanel();
 loadKeys();
@@ -150,7 +140,7 @@ let expireDate = new Date();
 expireDate.setDate(expireDate.getDate() + days);
 
 const { error } = await client
-.from("license_keys")
+.from("licenses")   // ✅ FINAL TABLE NAME
 .insert([{
 username:user,
 license_key:key,
@@ -170,7 +160,7 @@ loadKeys();
 async function loadKeys(){
 
 let { data, error } = await client
-.from("license_keys")
+.from("licenses")   // ✅ FINAL TABLE NAME
 .select("*")
 .order("id",{ascending:false});
 
@@ -205,7 +195,7 @@ async function toggleStatus(id,current){
 let newStatus = current=="Active" ? "Blocked" : "Active";
 
 await client
-.from("license_keys")
+.from("licenses")   // ✅ FINAL TABLE NAME
 .update({status:newStatus})
 .eq("id",id);
 
