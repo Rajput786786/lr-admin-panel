@@ -19,14 +19,15 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 .status-block{color:red;}
 .logout-btn{background:red;color:white;}
 </style>
-</head>
 
+</head>
 <body>
 
 <header>LR OWNER PANEL</header>
 
 <div class="container">
 
+<!-- LOGIN -->
 <div class="card" id="loginSection">
 <h3>Login</h3>
 <input type="email" id="loginEmail" placeholder="Email">
@@ -34,6 +35,7 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <button onclick="login()">Login</button>
 </div>
 
+<!-- MAIN PANEL -->
 <div id="mainPanel" style="display:none;">
 
 <div class="card">
@@ -86,6 +88,7 @@ loadKeys();
 
 // LOGIN
 async function login(){
+
 let email = document.getElementById("loginEmail").value.trim();
 let password = document.getElementById("loginPassword").value.trim();
 
@@ -100,9 +103,11 @@ password
 });
 
 if(error){
-alert(error.message);
+alert("Login Failed: " + error.message);
 return;
 }
+
+alert("Login Success");
 
 showPanel();
 loadKeys();
@@ -136,15 +141,16 @@ return;
 }
 
 let key = randomKey();
+
 let expireDate = new Date();
 expireDate.setDate(expireDate.getDate() + days);
 
 const { error } = await client
-.from("licenses")   // ✅ FINAL TABLE NAME
+.from("licenses")
 .insert([{
 username:user,
 license_key:key,
-expire_date:expireDate,
+expire_date: expireDate.toISOString(),   // ✅ FIXED
 status:"Active"
 }]);
 
@@ -160,7 +166,7 @@ loadKeys();
 async function loadKeys(){
 
 let { data, error } = await client
-.from("licenses")   // ✅ FINAL TABLE NAME
+.from("licenses")
 .select("*")
 .order("id",{ascending:false});
 
@@ -173,12 +179,22 @@ let table = document.getElementById("keyTable");
 table.innerHTML="";
 
 data.forEach(k=>{
+
+let expire = new Date(k.expire_date);
+let today = new Date();
+
+let realStatus = k.status;
+
+if(expire < today){
+realStatus = "Expired";
+}
+
 table.innerHTML += `
 <tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
-<td>${new Date(k.expire_date).toLocaleDateString()}</td>
-<td class="${k.status=="Active" ? "status-active" : "status-block"}">${k.status}</td>
+<td>${expire.toLocaleDateString()}</td>
+<td class="${realStatus=="Active" ? "status-active" : "status-block"}">${realStatus}</td>
 <td>
 <button onclick="toggleStatus(${k.id},'${k.status}')">
 ${k.status=="Active" ? "Block" : "Unblock"}
@@ -195,7 +211,7 @@ async function toggleStatus(id,current){
 let newStatus = current=="Active" ? "Blocked" : "Active";
 
 await client
-.from("licenses")   // ✅ FINAL TABLE NAME
+.from("licenses")
 .update({status:newStatus})
 .eq("id",id);
 
