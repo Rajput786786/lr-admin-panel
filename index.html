@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <title>LR Owner Panel</title>
 
-<script src="https://unpkg.com/@supabase/supabase-js@1/dist/supabase.min.js"></script>
+<!-- SUPABASE V2 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
@@ -27,6 +28,7 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <div class="container">
 
+<!-- LOGIN -->
 <div class="card" id="loginSection">
 <h3>Login</h3>
 <input type="email" id="loginEmail" placeholder="Email">
@@ -34,6 +36,7 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <button onclick="login()">Login</button>
 </div>
 
+<!-- MAIN PANEL -->
 <div id="mainPanel" style="display:none;">
 
 <div class="card">
@@ -68,19 +71,25 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 
 <script>
 
-const client = window.supabase.createClient(
+// SUPABASE INIT
+const { createClient } = supabase;
+
+const client = createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
 
-// ✅ SESSION CHECK ON LOAD
-window.onload = async function(){
-let session = client.auth.session();
-if(session){
+// CHECK SESSION ON LOAD
+document.addEventListener("DOMContentLoaded", async () => {
+
+const { data } = await client.auth.getSession();
+
+if(data.session){
 showPanel();
 loadKeys();
 }
-}
+
+});
 
 // LOGIN
 async function login(){
@@ -93,7 +102,7 @@ alert("Enter Email & Password");
 return;
 }
 
-const { user, error } = await client.auth.signIn({
+const { error } = await client.auth.signInWithPassword({
 email: email,
 password: password
 });
@@ -104,6 +113,7 @@ return;
 }
 
 alert("Login Success");
+
 showPanel();
 loadKeys();
 }
