@@ -22,7 +22,6 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #222;}
 .status-active{color:#00ff9d;}
 .status-block{color:red;}
 .hidden{display:none;}
-h3{color:#00f5ff;}
 .admin-title{color:#00ff9d;}
 </style>
 </head>
@@ -58,9 +57,9 @@ h3{color:#00f5ff;}
 <option value="hours">Hours</option>
 </select>
 
-<button class="owner-btn" onclick="generateKey('owner')">Generate Owner Key</button>
+<button class="owner-btn" onclick="generateKey('owner')">Generate Key</button>
 
-<h4>All Owner Keys</h4>
+<h4>Owner Keys</h4>
 <table>
 <thead>
 <tr>
@@ -73,11 +72,27 @@ h3{color:#00f5ff;}
 </thead>
 <tbody id="ownerTable"></tbody>
 </table>
+
+<h4>All Admin Keys</h4>
+<table>
+<thead>
+<tr>
+<th>User</th>
+<th>Key</th>
+<th>Expire</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="allAdminKeys"></tbody>
+</table>
 </div>
 
 <!-- ADMIN PANEL -->
 <div class="card hidden" id="adminPanel">
 <h3 class="admin-title">ADMIN PANEL</h3>
+
+<h4>Your Balance: ₹ <span id="adminBalance">0</span></h4>
 
 <input type="text" id="adminUser" placeholder="User Name">
 <input type="text" id="adminManualKey" placeholder="Manual Key (Optional)">
@@ -87,7 +102,7 @@ h3{color:#00f5ff;}
 <option value="hours">Hours</option>
 </select>
 
-<button class="admin-btn" onclick="generateKey('admin')">Generate Admin Key</button>
+<button class="admin-btn" onclick="generateKey('admin')">Generate Key</button>
 
 <h4>Your Keys</h4>
 <table>
@@ -102,6 +117,7 @@ h3{color:#00f5ff;}
 </thead>
 <tbody id="adminTable"></tbody>
 </table>
+
 </div>
 
 </div>
@@ -112,12 +128,13 @@ h3{color:#00f5ff;}
 const { createClient } = supabase;
 
 const client = createClient(
-"https://YOUR_PROJECT.supabase.co",
-"YOUR_PUBLIC_ANON_KEY"
+"https://dpskhodrzlnqczibolug.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
 let currentUser;
 let currentRole;
+let currentBalance = 0;
 
 document.addEventListener("DOMContentLoaded", async () => {
 const { data } = await client.auth.getSession();
@@ -138,11 +155,12 @@ const { data:{user} } = await client.auth.getUser();
 currentUser=user;
 
 let { data } = await client.from("profiles")
-.select("role")
+.select("role,balance")
 .eq("id",user.id)
 .single();
 
 currentRole=data.role;
+currentBalance=data.balance || 0;
 
 loginSection.style.display="none";
 mainPanel.classList.remove("hidden");
@@ -152,6 +170,7 @@ ownerPanel.classList.remove("hidden");
 adminPanel.classList.remove("hidden");
 }else{
 adminPanel.classList.remove("hidden");
+adminBalance.innerText=currentBalance;
 }
 
 loadKeys();
@@ -184,6 +203,25 @@ unit=adminType.value;
 
 if(!user||!validity){alert("Fill fields");return;}
 
+let cost = 0;
+
+if(type==="admin"){
+if(unit==="days") cost = validity * 100;
+else cost = validity * 10;
+
+if(currentBalance < cost){
+alert("Insufficient Balance");
+return;
+}
+currentBalance -= cost;
+
+await client.from("profiles")
+.update({balance:currentBalance})
+.eq("id",currentUser.id);
+
+adminBalance.innerText=currentBalance;
+}
+
 let expire = new Date();
 
 if(unit==="days"){
@@ -197,7 +235,8 @@ username:user,
 license_key:manualKey?manualKey:randomKey(),
 expire_date:expire.toISOString(),
 status:"Active",
-created_by:currentUser.id
+created_by:currentUser.id,
+key_type:type
 }]);
 
 loadKeys();
@@ -206,19 +245,33 @@ loadKeys();
 async function loadKeys(){
 
 if(currentRole==="owner"){
-let { data } = await client.from("license_keys")
+
+// Owner Keys
+let { data:ownerKeys } = await client.from("license_keys")
 .select("*")
-.eq("created_by", currentUser.id)
+.eq("key_type","owner")
 .order("id",{ascending:false});
 
 ownerTable.innerHTML="";
-data.forEach(k=>{
-let time=new Date(k.expire_date).toLocaleString("en-IN",{hour12:true});
-ownerTable.innerHTML+=rowTemplate(k,time);
+ownerKeys.forEach(k=>{
+ownerTable.innerHTML+=rowTemplate(k);
 });
+
+// All Admin Keys
+let { data:adminKeys } = await client.from("license_keys")
+.select("*")
+.eq("key_type","admin")
+.order("id",{ascending:false});
+
+allAdminKeys.innerHTML="";
+adminKeys.forEach(k=>{
+allAdminKeys.innerHTML+=rowTemplate(k);
+});
+
 }
 
 if(currentRole==="admin"){
+
 let { data } = await client.from("license_keys")
 .select("*")
 .eq("created_by", currentUser.id)
@@ -226,14 +279,14 @@ let { data } = await client.from("license_keys")
 
 adminTable.innerHTML="";
 data.forEach(k=>{
-let time=new Date(k.expire_date).toLocaleString("en-IN",{hour12:true});
-adminTable.innerHTML+=rowTemplate(k,time);
+adminTable.innerHTML+=rowTemplate(k);
 });
 }
 
 }
 
-function rowTemplate(k,time){
+function rowTemplate(k){
+let time=new Date(k.expire_date).toLocaleString("en-IN",{hour12:true});
 return `
 <tr>
 <td>${k.username}</td>
