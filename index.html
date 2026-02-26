@@ -7,32 +7,26 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
-header{padding:25px;text-align:center;font-size:30px;background:#111;color:#00f5ff;font-weight:bold;letter-spacing:2px;}
+header{padding:25px;text-align:center;font-size:32px;font-weight:bold;background:#111;color:#00ffff;letter-spacing:2px;}
 .container{padding:20px;max-width:1200px;margin:auto;}
-.card{background:#151528;padding:20px;border-radius:12px;margin-bottom:30px;box-shadow:0 0 15px #00f5ff22;}
-.owner-title{font-size:26px;color:#00f5ff;font-weight:bold;margin-bottom:15px;}
-.admin-title{font-size:22px;color:#00ff9d;font-weight:bold;margin-bottom:10px;}
-.admin-email{font-size:16px;color:#ff5c5c;margin-bottom:15px;}
-.balance{font-size:18px;color:#00ff9d;font-weight:bold;margin-bottom:10px;}
-.stats{margin:10px 0;}
-.stats div{margin:3px 0;}
-input,select{
-padding:10px;margin:6px 0;width:100%;
-border:none;border-radius:6px;background:#0d0d18;color:white;
-}
-button{
-padding:8px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;
-}
-.btn-main{background:#00f5ff;color:black;}
-.btn-admin{background:#00ff9d;color:black;}
-.btn-danger{background:red;color:white;}
-.btn-gray{background:#888;color:black;}
-table{width:100%;margin-top:10px;border-collapse:collapse;}
-th,td{padding:8px;text-align:center;border-bottom:1px solid #222;}
+.card{background:#151528;padding:20px;border-radius:12px;margin-bottom:30px;box-shadow:0 0 25px #00f5ff22;}
+input,select{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
+button{padding:8px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
+.owner-btn{background:#00f5ff;color:black;}
+.admin-btn{background:#00ff9d;color:black;}
+.danger-btn{background:red;color:white;}
+.block-btn{background:#888;color:black;}
+.logout-btn{background:red;color:white;width:100%;}
+table{width:100%;margin-top:15px;border-collapse:collapse;}
+th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;}
 .status-active{color:#00ff9d;}
 .status-block{color:red;}
 .hidden{display:none;}
-.logout{background:red;color:white;width:100%;}
+.section-title{font-size:20px;font-weight:bold;margin-bottom:10px;}
+.admin-box{border:1px solid #00ff9d33;padding:15px;border-radius:10px;margin-top:20px;}
+.balance-box{float:right;font-size:14px;color:#00ff9d;}
+.clear{clear:both;}
+.small{font-size:12px;color:#aaa;}
 </style>
 </head>
 
@@ -42,33 +36,31 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;}
 
 <div class="container">
 
-<div class="card" id="loginBox">
-<h3>Login</h3>
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
-<button class="btn-main" onclick="login()">Login</button>
+<div class="card" id="loginSection">
+<input type="email" id="loginEmail" placeholder="Email">
+<input type="password" id="loginPassword" placeholder="Password">
+<button class="owner-btn" onclick="login()">Login</button>
 </div>
 
 <div id="mainPanel" class="hidden">
 
 <div class="card">
-<button class="logout" onclick="logout()">Logout</button>
+<button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
-<!-- OWNER PANEL -->
-<div id="ownerPanel" class="hidden card">
-<div class="owner-title">OWNER PANEL</div>
+<!-- OWNER SECTION -->
+<div id="ownerSection" class="card hidden">
+<div class="section-title">OWNER KEYS</div>
 
 <input type="text" id="ownerUser" placeholder="User">
-<input type="text" id="ownerKey" placeholder="Manual Key (Optional)">
-<input type="number" id="ownerValue" placeholder="Validity Number">
+<input type="text" id="ownerManualKey" placeholder="Manual Key (Optional)">
+<input type="number" id="ownerValidity" placeholder="Validity Number">
 <select id="ownerType">
 <option value="days">Days</option>
 <option value="hours">Hours</option>
 </select>
-<button class="btn-main" onclick="generateKey()">Generate Key</button>
+<button class="owner-btn" onclick="generateKey('owner')">Generate Key</button>
 
-<h4 style="margin-top:20px;">All Keys</h4>
 <table>
 <thead>
 <tr>
@@ -79,52 +71,66 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;}
 <th>Action</th>
 </tr>
 </thead>
-<tbody id="ownerTable"></tbody>
+<tbody id="ownerKeys"></tbody>
 </table>
-
-<h4 style="margin-top:30px;">Admins</h4>
-<div id="adminList"></div>
-
 </div>
 
-<!-- ADMIN PANEL -->
-<div id="adminPanel" class="hidden"></div>
+<!-- ADMIN SECTION -->
+<div id="adminContainer" class="card hidden">
+<div class="section-title">ADMIN SECTIONS</div>
+<div id="adminSections"></div>
+</div>
 
 </div>
 </div>
 
 <script>
 
-const client = supabase.createClient(
+const { createClient } = supabase;
+
+const client = createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
-let currentUser, currentProfile;
+let currentUser;
+let currentRole;
+
+document.addEventListener("DOMContentLoaded", async () => {
+const { data } = await client.auth.getSession();
+if(data.session){ initUser(); }
+});
 
 async function login(){
-let { error } = await client.auth.signInWithPassword({
-email:email.value,
-password:password.value
+const { error } = await client.auth.signInWithPassword({
+email:loginEmail.value,
+password:loginPassword.value
 });
 if(error){ alert(error.message); return; }
+initUser();
+}
 
-let { data } = await client.from("profiles").select("*")
-.eq("id",(await client.auth.getUser()).data.user.id).single();
+async function initUser(){
+const { data:{user} } = await client.auth.getUser();
+currentUser=user;
 
-if(data.status==="blocked"){ alert("Blocked"); logout(); return; }
+let { data } = await client.from("profiles")
+.select("*")
+.eq("id",user.id)
+.single();
 
-currentUser=(await client.auth.getUser()).data.user;
-currentProfile=data;
+currentRole=data.role;
 
-loginBox.classList.add("hidden");
+loginSection.classList.add("hidden");
 mainPanel.classList.remove("hidden");
 
-if(data.role==="owner"){
-ownerPanel.classList.remove("hidden");
-loadOwner();
+if(currentRole==="owner"){
+ownerSection.classList.remove("hidden");
+adminContainer.classList.remove("hidden");
+loadOwnerKeys();
+loadAdminSections();
 }else{
-loadAdmin();
+loadAdminPanel();
 }
 }
 
@@ -137,97 +143,83 @@ function randomKey(){
 return "LR-"+Math.floor(100000+Math.random()*900000);
 }
 
-async function generateKey(){
+async function generateKey(type){
 
-let user=ownerUser.value;
-let manual=ownerKey.value;
-let val=parseInt(ownerValue.value);
-let type=ownerType.value;
+let user, manualKey, validity, unit;
 
-if(!user||!val) return alert("Fill fields");
+if(type==="owner"){
+user=ownerUser.value;
+manualKey=ownerManualKey.value;
+validity=ownerValidity.value;
+unit=ownerType.value;
+}else{
+return;
+}
 
-let expire=new Date();
+if(!user||!validity){alert("Fill fields");return;}
 
-if(type==="days") expire.setDate(expire.getDate()+val);
-else expire.setHours(expire.getHours()+val);
+let expire = new Date();
+
+if(unit==="days"){
+expire.setDate(expire.getDate()+parseInt(validity));
+}else{
+expire.setHours(expire.getHours()+parseInt(validity));
+}
 
 await client.from("license_keys").insert([{
 username:user,
-license_key:manual?manual:randomKey(),
+license_key:manualKey?manualKey:randomKey(),
 expire_date:expire.toISOString(),
 status:"Active",
 created_by:currentUser.id
 }]);
 
-loadOwner();
+loadOwnerKeys();
 }
 
-async function loadOwner(){
+async function loadOwnerKeys(){
 
 let { data } = await client.from("license_keys")
-.select("*").order("id",{ascending:false});
+.select("*")
+.eq("created_by", currentUser.id)
+.order("id",{ascending:false});
 
-ownerTable.innerHTML="";
+ownerKeys.innerHTML="";
 data.forEach(k=>{
-ownerTable.innerHTML+=row(k,true);
-});
-
-let { data:admins } = await client.from("profiles")
-.select("*").eq("role","admin");
-
-adminList.innerHTML="";
-admins.forEach(a=>{
-adminList.innerHTML+=`
-<div class="card">
-<div class="admin-title">ADMIN PANEL</div>
-<div class="admin-email">${a.email}</div>
-<div class="balance">Balance ₹ ${a.balance}</div>
-<div class="stats">
-<div>Total Key</div>
-<div>Active Key</div>
-<div>Block Key</div>
-</div>
-<button class="btn-gray" onclick="toggleAdmin('${a.id}','${a.status}')">
-${a.status==="active"?"Block Admin":"Unblock Admin"}
-</button>
-<button class="btn-danger" onclick="deleteAdmin('${a.id}')">Delete Admin</button>
-</div>
-`;
+ownerKeys.innerHTML+=rowTemplate(k);
 });
 }
 
-async function loadAdmin(){
+async function loadAdminSections(){
 
-adminPanel.classList.remove("hidden");
+let { data:admins } = await client.from("profiles")
+.select("*")
+.eq("role","admin");
+
+adminSections.innerHTML="";
+
+for(let admin of admins){
 
 let { data:keys } = await client.from("license_keys")
-.select("*").eq("created_by",currentUser.id);
+.select("*")
+.eq("created_by", admin.id)
+.order("id",{ascending:false});
 
-let total=keys.length;
-let active=keys.filter(k=>k.status==="Active").length;
-let block=keys.filter(k=>k.status==="Blocked").length;
+let total = keys.length;
+let active = keys.filter(k=>k.status==="Active").length;
+let blocked = keys.filter(k=>k.status==="Blocked").length;
 
-adminPanel.innerHTML=`
-<div class="card">
-<div class="admin-title">ADMIN PANEL</div>
-<div class="admin-email">${currentProfile.email}</div>
-<div class="balance">Balance ₹ ${currentProfile.balance}</div>
-
-<div class="stats">
-<div>Total Key ${total}</div>
-<div>Active Key ${active}</div>
-<div>Block Key ${block}</div>
+let section = `
+<div class="admin-box">
+<div><b>${admin.email}</b>
+<span class="balance-box">Balance: ₹${admin.balance||0}</span>
 </div>
-
-<input type="text" id="adminUser" placeholder="User">
-<input type="text" id="adminManual" placeholder="Manual Key (Optional)">
-<input type="number" id="adminValue" placeholder="Validity Number">
-<select id="adminType">
-<option value="days">Days</option>
-<option value="hours">Hours</option>
-</select>
-<button class="btn-admin" onclick="adminGenerate()">Generate Key</button>
-
+<div class="small">
+Total Key: ${total} |
+Active Key: ${active} |
+Block Key: ${blocked}
+</div>
+<br>
 <table>
 <thead>
 <tr>
@@ -238,89 +230,69 @@ adminPanel.innerHTML=`
 <th>Action</th>
 </tr>
 </thead>
-<tbody id="adminTable"></tbody>
-</table>
+<tbody>
+`;
+
+keys.forEach(k=>{
+section+=rowTemplate(k);
+});
+
+section+=`
+</tbody></table>
+<button class="block-btn" onclick="blockAdmin('${admin.id}')">Block Admin</button>
+<button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete Admin</button>
 </div>
 `;
 
-let table=document.getElementById("adminTable");
-keys.forEach(k=> table.innerHTML+=row(k,false));
+adminSections.innerHTML+=section;
+}
 }
 
-async function adminGenerate(){
-
-let user=adminUser.value;
-let manual=adminManual.value;
-let val=parseInt(adminValue.value);
-let type=adminType.value;
-
-if(!user||!val) return alert("Fill");
-
-let cost=(type==="days")?val*100:val*10;
-if(currentProfile.balance<cost) return alert("Low Balance");
-
-let expire=new Date();
-if(type==="days") expire.setDate(expire.getDate()+val);
-else expire.setHours(expire.getHours()+val);
-
-await client.from("license_keys").insert([{
-username:user,
-license_key:manual?manual:randomKey(),
-expire_date:expire.toISOString(),
-status:"Active",
-created_by:currentUser.id
-}]);
-
-await client.from("profiles")
-.update({balance:currentProfile.balance-cost})
-.eq("id",currentUser.id);
-
-loadAdmin();
-}
-
-function row(k,isOwner){
+function rowTemplate(k){
+let time=new Date(k.expire_date).toLocaleString("en-IN",{hour12:true});
 return `
 <tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
-<td>${new Date(k.expire_date).toLocaleString("en-IN",{hour12:true})}</td>
+<td>${time}</td>
 <td class="${k.status==="Active"?"status-active":"status-block"}">${k.status}</td>
 <td>
-<button class="btn-gray" onclick="toggleKey(${k.id},'${k.status}')">
+<button class="block-btn" onclick="toggleStatus(${k.id},'${k.status}')">
 ${k.status==="Active"?"Block":"Unblock"}
 </button>
-<button class="btn-danger" onclick="deleteKey(${k.id})">Delete</button>
+<button class="danger-btn" onclick="deleteKey(${k.id})">Delete</button>
 </td>
-</tr>
-`;
+</tr>`;
 }
 
-async function toggleKey(id,status){
-let newStatus=status==="Active"?"Blocked":"Active";
+async function toggleStatus(id,current){
+let newStatus=current==="Active"?"Blocked":"Active";
 await client.from("license_keys").update({status:newStatus}).eq("id",id);
-if(currentProfile.role==="owner") loadOwner(); else loadAdmin();
+loadOwnerKeys();
+loadAdminSections();
 }
 
 async function deleteKey(id){
+if(!confirm("Delete?"))return;
 await client.from("license_keys").delete().eq("id",id);
-if(currentProfile.role==="owner") loadOwner(); else loadAdmin();
+loadOwnerKeys();
+loadAdminSections();
 }
 
-async function toggleAdmin(id,status){
-let newStatus=status==="active"?"blocked":"active";
-await client.from("profiles").update({status:newStatus}).eq("id",id);
-if(newStatus==="blocked"){
+async function blockAdmin(id){
+await client.from("profiles").update({status:"blocked"}).eq("id",id);
 await client.from("license_keys").update({status:"Blocked"}).eq("created_by",id);
-}
-loadOwner();
+loadAdminSections();
 }
 
 async function deleteAdmin(id){
+if(!confirm("Delete Admin?"))return;
 await client.from("license_keys").delete().eq("created_by",id);
 await client.from("profiles").delete().eq("id",id);
-loadOwner();
+loadAdminSections();
 }
 
 </script>
+
 </body>
 </html>
