@@ -10,10 +10,10 @@ body{margin:0;font-family:Arial;background:linear-gradient(135deg,#050510,#0f0f1
 .title{text-align:center;font-size:30px;font-weight:bold;color:#00ffff;text-shadow:0 0 15px #00ffff;margin:25px 0;}
 .glass{background:rgba(255,255,255,0.05);backdrop-filter:blur(15px);
 border:1px solid rgba(0,255,255,0.2);box-shadow:0 0 30px rgba(0,255,255,0.15);
-border-radius:18px;padding:25px;margin-bottom:25px;}
+border-radius:18px;padding:20px;margin-bottom:20px;}
 input,select{width:100%;padding:10px;margin:6px 0;background:transparent;
 border:none;border-bottom:2px solid #00ffff;color:white;outline:none;}
-button{padding:7px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;margin:4px;}
+button{padding:6px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;margin:4px;}
 .btn-primary{background:#00ffff;color:black;}
 .btn-danger{background:red;color:white;}
 .btn-block{background:#888;color:black;}
@@ -49,16 +49,11 @@ border:1px solid rgba(0,255,255,0.3);}
 
 const supabaseClient = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"YOUR_ANON_KEY_HERE"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
 let currentUser=null;
 let profile=null;
-
-/* ===== AUTH LISTENER ===== */
-supabaseClient.auth.onAuthStateChange((event,session)=>{
-if(session){ loadSession(); }
-});
 
 /* ===== LOGIN ===== */
 document.getElementById("loginBtn").addEventListener("click", async ()=>{
@@ -66,11 +61,18 @@ const email=loginEmail.value.trim();
 const password=loginPassword.value.trim();
 if(!email||!password){alert("Enter Email & Password");return;}
 const {error}=await supabaseClient.auth.signInWithPassword({email,password});
-if(error){alert(error.message);}
+if(error){alert(error.message);return;}
+loadSession();
+});
+
+/* ===== AUTO SESSION ===== */
+supabaseClient.auth.getSession().then(({data})=>{
+if(data.session) loadSession();
 });
 
 /* ===== LOAD SESSION ===== */
 async function loadSession(){
+
 const {data:{user}}=await supabaseClient.auth.getUser();
 if(!user)return;
 
@@ -101,8 +103,8 @@ function isExpired(d){return new Date(d)<new Date();}
 /* ===== MAIN RENDER ===== */
 async function renderPanel(){
 content.innerHTML="";
-if(profile.role==="owner"){ await renderOwner(); }
-else{ await renderAdmin(); }
+if(profile.role==="owner") await renderOwner();
+else await renderAdmin();
 }
 
 /* ===== OWNER PANEL ===== */
@@ -110,7 +112,7 @@ async function renderOwner(){
 
 let html="";
 
-/* OWNER GENERATE */
+/* GENERATE SECTION */
 html+=generateSection("owner");
 
 /* OWNER KEYS */
@@ -149,7 +151,6 @@ ${admin.status==="blocked"?"Unblock":"Block"}
 }
 
 html+=addAdminHTML();
-
 content.innerHTML=html;
 }
 
@@ -174,7 +175,7 @@ html+=buildTable("Your Keys",keys,true);
 content.innerHTML=html;
 }
 
-/* ===== GENERATE SECTION ===== */
+/* ===== GENERATE UI ===== */
 function generateSection(type){
 return `<div class="glass">
 <h3>Generate Key</h3>
@@ -258,7 +259,21 @@ created_by:currentUser.id
 renderPanel();
 }
 
-/* ===== TOGGLE ADMIN ===== */
+/* ===== KEY ACTIONS ===== */
+async function toggleKey(id,status){
+await supabaseClient.from("license_keys")
+.update({status:status==="Active"?"Blocked":"Active"})
+.eq("id",id);
+renderPanel();
+}
+
+async function deleteKey(id){
+if(!confirm("Delete?"))return;
+await supabaseClient.from("license_keys").delete().eq("id",id);
+renderPanel();
+}
+
+/* ===== ADMIN CONTROL ===== */
 async function toggleAdmin(id,status){
 
 if(profile.id===id){alert("Owner cannot modify self");return;}
@@ -276,7 +291,6 @@ await supabaseClient.from("license_keys")
 renderPanel();
 }
 
-/* ===== DELETE ADMIN ===== */
 async function deleteAdmin(id){
 
 if(profile.id===id){alert("Owner cannot delete self");return;}
@@ -285,7 +299,9 @@ if(!confirm("Delete Admin?"))return;
 
 const {data:session}=await supabaseClient.auth.getSession();
 
-const res=await fetch("https://dpskhodrzlnqczibolug.supabase.co/functions/v1/delete-admin",{
+const res=await fetch(
+"https://dpskhodrzlnqczibolug.supabase.co/functions/v1/delete-admin",
+{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
