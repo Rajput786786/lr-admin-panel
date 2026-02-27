@@ -2,139 +2,226 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>LR OWNER PANEL</title>
+<title>LR Owner Panel</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-color:white;
-text-align:center;
-}
-.box{
-margin-top:100px;
-padding:30px;
-background:rgba(255,255,255,0.05);
-border-radius:15px;
-display:inline-block;
-width:320px;
-}
-input{
-width:90%;
-padding:10px;
-margin:10px 0;
-border:none;
-border-bottom:2px solid cyan;
-background:transparent;
-color:white;
-outline:none;
-}
-button{
-padding:10px 20px;
-background:cyan;
-border:none;
-border-radius:5px;
-cursor:pointer;
-}
-#error{
-color:red;
-margin-top:10px;
-}
-.hidden{display:none;}
+body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
+header{padding:20px;text-align:center;font-size:24px;background:#111;color:#00ffff;}
+.container{padding:20px;}
+.card{background:#1a1a2e;padding:20px;border-radius:10px;margin-bottom:20px;}
+input{padding:10px;margin:5px 0;width:100%;border:none;border-radius:5px;}
+button{padding:10px;margin-top:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;}
+.main-btn{width:100%;background:#00ffff;color:black;}
+.logout-btn{background:red;color:white;width:100%;}
+.delete-btn{background:#ff2e2e;color:white;}
+table{width:100%;margin-top:15px;border-collapse:collapse;}
+th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
+.status-active{color:#00ff88;}
+.status-block{color:red;}
 </style>
 </head>
+
 <body>
 
-<div id="loginBox" class="box">
-<h2>LR OWNER PANEL</h2>
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
-<button id="loginBtn">LOGIN</button>
-<div id="error"></div>
+<header>LR OWNER PANEL</header>
+
+<div class="container">
+
+<div class="card" id="loginSection">
+<h3>Login</h3>
+<input type="email" id="loginEmail" placeholder="Email">
+<input type="password" id="loginPassword" placeholder="Password">
+<button class="main-btn" onclick="login()">Login</button>
 </div>
 
-<div id="panelBox" class="box hidden">
-<h2 id="roleTitle"></h2>
-<p id="userEmail"></p>
-<button onclick="logout()">LOGOUT</button>
+<div id="mainPanel" style="display:none;">
+
+<div class="card">
+<button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<div class="card">
+<h3>Generate License Key</h3>
+<input type="text" id="username" placeholder="User Name">
+<input type="number" id="days" placeholder="Validity (Days)">
+<button class="main-btn" onclick="generateKey()">Generate Key</button>
+</div>
+
+<div class="card">
+<h3>Active Keys</h3>
+<table>
+<thead>
+<tr>
+<th>User</th>
+<th>Key</th>
+<th>Expire</th>
+<th>Status</th>
+<th>Block</th>
+<th>Delete</th>
+</tr>
+</thead>
+<tbody id="keyTable"></tbody>
+</table>
+</div>
+
+</div>
 </div>
 
 <script>
 
-const supabase = window.supabase.createClient(
+const { createClient } = supabase;
+
+const client = createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
-document.getElementById("loginBtn").addEventListener("click", login);
-
-async function login(){
-
-const email=document.getElementById("email").value.trim();
-const password=document.getElementById("password").value;
-const errorBox=document.getElementById("error");
-errorBox.textContent="";
-
-if(!email||!password){
-errorBox.textContent="Email and Password required";
-return;
+// SESSION CHECK
+document.addEventListener("DOMContentLoaded", async () => {
+const { data } = await client.auth.getSession();
+if(data.session){
+showPanel();
+loadKeys();
 }
-
-const {data,error}=await supabase.auth.signInWithPassword({
-email:email,
-password:password
 });
 
-if(error){
-errorBox.textContent=error.message;
+// LOGIN
+async function login(){
+
+let email = document.getElementById("loginEmail").value.trim();
+let password = document.getElementById("loginPassword").value.trim();
+
+if(!email || !password){
+alert("Enter Email & Password");
 return;
 }
 
-loadUser();
-
-}
-
-async function loadUser(){
-
-const {data:{user}}=await supabase.auth.getUser();
-
-if(!user){
-document.getElementById("loginBox").classList.remove("hidden");
-document.getElementById("panelBox").classList.add("hidden");
-return;
-}
-
-const {data,error}=await supabase
-.from("profiles")
-.select("*")
-.eq("id",user.id)
-.single();
+const { error } = await client.auth.signInWithPassword({ email, password });
 
 if(error){
-document.getElementById("error").textContent="Profile not found";
+alert(error.message);
 return;
 }
 
-document.getElementById("loginBox").classList.add("hidden");
-document.getElementById("panelBox").classList.remove("hidden");
-document.getElementById("userEmail").innerText=data.email;
-
-if(data.role==="owner"){
-document.getElementById("roleTitle").innerText="OWNER PANEL";
-}else{
-document.getElementById("roleTitle").innerText="ADMIN PANEL";
+showPanel();
+loadKeys();
 }
 
-}
-
+// LOGOUT
 async function logout(){
-await supabase.auth.signOut();
+await client.auth.signOut();
 location.reload();
 }
 
-loadUser();
+function showPanel(){
+document.getElementById("loginSection").style.display="none";
+document.getElementById("mainPanel").style.display="block";
+}
+
+// RANDOM KEY
+function randomKey(){
+return "LR-" + Math.floor(Math.random()*1000000);
+}
+
+// GENERATE KEY
+async function generateKey(){
+
+let user = document.getElementById("username").value.trim();
+let days = parseInt(document.getElementById("days").value);
+
+if(!user || isNaN(days)){
+alert("Fill all fields");
+return;
+}
+
+let key = randomKey();
+let expireDate = new Date();
+expireDate.setDate(expireDate.getDate() + days);
+
+const { error } = await client
+.from("license_keys")
+.insert([{
+username:user,
+license_key:key,
+expire_date:expireDate,
+status:"Active"
+}]);
+
+if(error){
+alert(error.message);
+return;
+}
+
+loadKeys();
+}
+
+// LOAD KEYS
+async function loadKeys(){
+
+let { data, error } = await client
+.from("license_keys")
+.select("*")
+.order("id",{ascending:false});
+
+if(error){
+alert(error.message);
+return;
+}
+
+let table = document.getElementById("keyTable");
+table.innerHTML="";
+
+data.forEach(k=>{
+table.innerHTML += `
+<tr>
+<td>${k.username}</td>
+<td>${k.license_key}</td>
+<td>${new Date(k.expire_date).toLocaleDateString()}</td>
+<td class="${k.status=="Active" ? "status-active" : "status-block"}">${k.status}</td>
+<td>
+<button onclick="toggleStatus(${k.id},'${k.status}')">
+${k.status=="Active" ? "Block" : "Unblock"}
+</button>
+</td>
+<td>
+<button class="delete-btn" onclick="deleteKey(${k.id})">
+Delete
+</button>
+</td>
+</tr>
+`;
+});
+}
+
+// BLOCK / UNBLOCK
+async function toggleStatus(id,current){
+
+let newStatus = current=="Active" ? "Blocked" : "Active";
+
+await client
+.from("license_keys")
+.update({status:newStatus})
+.eq("id",id);
+
+loadKeys();
+}
+
+// DELETE KEY
+async function deleteKey(id){
+
+let confirmDelete = confirm("Delete this key permanently?");
+
+if(!confirmDelete) return;
+
+await client
+.from("license_keys")
+.delete()
+.eq("id",id);
+
+loadKeys();
+}
 
 </script>
 
