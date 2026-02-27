@@ -1,117 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>LR OWNER PANEL</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body{
-      margin:0;
-      font-family:Arial;
-      background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-      color:white;
-      text-align:center;
-    }
-    .box{
-      margin-top:100px;
-      padding:30px;
-      background:rgba(255,255,255,0.05);
-      border-radius:15px;
-      display:inline-block;
-      width:300px;
-    }
-    input{
-      width:90%;
-      padding:10px;
-      margin:10px 0;
-      border:none;
-      border-bottom:2px solid cyan;
-      background:transparent;
-      color:white;
-    }
-    button{
-      padding:10px 20px;
-      background:cyan;
-      border:none;
-      border-radius:5px;
-      cursor:pointer;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>LR OWNER PANEL</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+color:white;
+text-align:center;
+}
+.box{
+margin-top:100px;
+padding:30px;
+background:rgba(255,255,255,0.05);
+border-radius:15px;
+display:inline-block;
+width:320px;
+}
+input{
+width:90%;
+padding:10px;
+margin:10px 0;
+border:none;
+border-bottom:2px solid cyan;
+background:transparent;
+color:white;
+outline:none;
+}
+button{
+padding:10px 20px;
+background:cyan;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
+#error{
+color:red;
+margin-top:10px;
+}
+.hidden{display:none;}
+</style>
 </head>
 <body>
 
-<div id="login" class="box">
-  <h2>LR OWNER PANEL</h2>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button onclick="login()">LOGIN</button>
+<div id="loginBox" class="box">
+<h2>LR OWNER PANEL</h2>
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Password">
+<button id="loginBtn">LOGIN</button>
+<div id="error"></div>
 </div>
 
-<div id="panel" class="box" style="display:none;">
-  <h2 id="roleTitle"></h2>
-  <p id="userEmail"></p>
-  <button onclick="logout()">LOGOUT</button>
+<div id="panelBox" class="box hidden">
+<h2 id="roleTitle"></h2>
+<p id="userEmail"></p>
+<button onclick="logout()">LOGOUT</button>
 </div>
 
 <script>
+
 const supabase = window.supabase.createClient(
-  "https://dpskhodrzlnqczibolug.supabase.co",
-  "sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
+"https://dpskhodrzlnqczibolug.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
+document.getElementById("loginBtn").addEventListener("click", login);
+
 async function login(){
-  const email=document.getElementById("email").value;
-  const password=document.getElementById("password").value;
 
-  const {data,error}=await supabase.auth.signInWithPassword({
-    email:email,
-    password:password
-  });
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value;
+const errorBox=document.getElementById("error");
+errorBox.textContent="";
 
-  if(error){
-    alert(error.message);
-    return;
-  }
-
-  loadUser();
+if(!email||!password){
+errorBox.textContent="Email and Password required";
+return;
 }
 
-async function loadUser(){
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user){
-    document.getElementById("login").style.display="block";
-    document.getElementById("panel").style.display="none";
-    return;
-  }
+const {data,error}=await supabase.auth.signInWithPassword({
+email:email,
+password:password
+});
 
-  const {data,error}=await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id",user.id)
-    .single();
-
-  if(error){
-    alert("Profile error");
-    return;
-  }
-
-  document.getElementById("login").style.display="none";
-  document.getElementById("panel").style.display="block";
-  document.getElementById("userEmail").innerText=data.email;
-
-  if(data.role==="owner"){
-    document.getElementById("roleTitle").innerText="OWNER PANEL";
-  }else{
-    document.getElementById("roleTitle").innerText="ADMIN PANEL";
-  }
-}
-
-async function logout(){
-  await supabase.auth.signOut();
-  location.reload();
+if(error){
+errorBox.textContent=error.message;
+return;
 }
 
 loadUser();
+
+}
+
+async function loadUser(){
+
+const {data:{user}}=await supabase.auth.getUser();
+
+if(!user){
+document.getElementById("loginBox").classList.remove("hidden");
+document.getElementById("panelBox").classList.add("hidden");
+return;
+}
+
+const {data,error}=await supabase
+.from("profiles")
+.select("*")
+.eq("id",user.id)
+.single();
+
+if(error){
+document.getElementById("error").textContent="Profile not found";
+return;
+}
+
+document.getElementById("loginBox").classList.add("hidden");
+document.getElementById("panelBox").classList.remove("hidden");
+document.getElementById("userEmail").innerText=data.email;
+
+if(data.role==="owner"){
+document.getElementById("roleTitle").innerText="OWNER PANEL";
+}else{
+document.getElementById("roleTitle").innerText="ADMIN PANEL";
+}
+
+}
+
+async function logout(){
+await supabase.auth.signOut();
+location.reload();
+}
+
+loadUser();
+
 </script>
 
 </body>
