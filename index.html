@@ -6,29 +6,85 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:linear-gradient(135deg,#050510,#0f0f1f);color:white;}
-.title{text-align:center;font-size:30px;font-weight:bold;color:#00ffff;text-shadow:0 0 15px #00ffff;margin:25px 0;}
-.glass{background:rgba(255,255,255,0.05);backdrop-filter:blur(15px);
-border:1px solid rgba(0,255,255,0.2);box-shadow:0 0 30px rgba(0,255,255,0.15);
-border-radius:18px;padding:20px;margin-bottom:20px;}
-input,select{width:100%;padding:10px;margin:6px 0;background:transparent;
-border:none;border-bottom:2px solid #00ffff;color:white;outline:none;}
-button{padding:6px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;margin:4px;}
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(135deg,#050510,#0f0f1f);
+color:white;
+}
+
+.title{
+text-align:center;
+font-size:30px;
+font-weight:bold;
+color:#00ffff;
+text-shadow:0 0 15px #00ffff;
+margin:25px 0;
+}
+
+.glass{
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(15px);
+border:1px solid rgba(0,255,255,0.2);
+box-shadow:0 0 30px rgba(0,255,255,0.15);
+border-radius:18px;
+padding:20px;
+margin-bottom:20px;
+overflow-x:auto;
+}
+
+input,select{
+width:100%;
+padding:10px;
+margin:6px 0;
+background:transparent;
+border:none;
+border-bottom:2px solid #00ffff;
+color:white;
+outline:none;
+}
+
+button{
+padding:6px 12px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+margin:4px;
+}
+
 .btn-primary{background:#00ffff;color:black;}
 .btn-danger{background:red;color:white;}
 .btn-block{background:#888;color:black;}
 .btn-logout{background:red;color:white;float:right;}
+
 .hidden{display:none;}
-table{width:100%;margin-top:10px;border-collapse:collapse;}
-th,td{padding:6px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);font-size:13px;}
-.green{color:#00ff9d;} .red{color:red;} .blue{color:#00ccff;}
+
+table{
+width:100%;
+min-width:850px;
+margin-top:10px;
+border-collapse:collapse;
+}
+
+th,td{
+padding:6px;
+text-align:center;
+border-bottom:1px solid rgba(255,255,255,0.1);
+font-size:13px;
+}
+
+.green{color:#00ff9d;}
+.red{color:red;}
+.blue{color:#00ccff;}
+
 .clear{clear:both;}
 </style>
 </head>
 
 <body>
 
-<div class="title">LR OWNER PANEL</div>
+<div class="title">LR OWNER PRIVATE PANEL</div>
 
 <div id="loginBox" class="glass" style="max-width:400px;margin:60px auto;">
 <input type="email" id="loginEmail" placeholder="Owner Email">
@@ -50,13 +106,16 @@ const supabaseClient = window.supabase.createClient(
 );
 
 let currentUser=null;
-let profile=null;
 
 /* LOGIN */
 document.getElementById("loginBtn").addEventListener("click", async ()=>{
 const email=loginEmail.value.trim();
 const password=loginPassword.value.trim();
-if(!email||!password){alert("Enter Email & Password");return;}
+
+if(!email||!password){
+alert("Enter Email & Password");
+return;
+}
 
 const {error}=await supabaseClient.auth.signInWithPassword({email,password});
 if(error){alert(error.message);return;}
@@ -77,15 +136,6 @@ if(!user)return;
 
 currentUser=user;
 
-const {data,error}=await supabaseClient
-.from("profiles").select("*").eq("id",user.id).single();
-
-if(error){alert("Profile error");return;}
-if(data.role!=="owner"){alert("Access Denied");await logout();return;}
-if(data.status==="blocked"){alert("Blocked");await logout();return;}
-
-profile=data;
-
 loginBox.classList.add("hidden");
 panel.classList.remove("hidden");
 
@@ -98,15 +148,14 @@ await supabaseClient.auth.signOut();
 location.reload();
 }
 
-function isExpired(d){return new Date(d)<new Date();}
+function isExpired(d){
+return new Date(d)<new Date();
+}
 
-/* MAIN RENDER */
+/* MAIN PANEL */
 async function renderPanel(){
 
-let html="";
-
-/* GENERATE SECTION */
-html+=`
+let html=`
 <div class="glass">
 <h3>Generate Key</h3>
 <input type="text" id="username" placeholder="Username">
@@ -119,7 +168,7 @@ html+=`
 <button class="btn-primary" onclick="generateKey()">Generate</button>
 </div>`;
 
-/* LOAD OWNER KEYS ONLY */
+/* LOAD KEYS */
 const {data:keys}=await supabaseClient
 .from("license_keys")
 .select("*")
@@ -129,9 +178,16 @@ const {data:keys}=await supabaseClient
 html+=`<div class="glass">
 <h3>Your Keys</h3>
 <table>
-<tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th></tr>`;
+<tr>
+<th>User</th>
+<th>Key</th>
+<th>Expire</th>
+<th>Status</th>
+<th>Action</th>
+</tr>`;
 
 keys.forEach(k=>{
+
 let expired=isExpired(k.expire_date);
 let status=expired?"Expired":k.status;
 let cls=expired?"blue":(k.status==="Active"?"green":"red");
@@ -163,7 +219,10 @@ const m=manualKey.value.trim();
 const v=parseInt(validity.value);
 const t=type.value;
 
-if(!u||!v){alert("Fill fields");return;}
+if(!u||!v){
+alert("Fill fields");
+return;
+}
 
 let key=m||("LR-"+Math.floor(100000+Math.random()*900000));
 
@@ -184,12 +243,6 @@ renderPanel();
 
 /* BLOCK / UNBLOCK */
 async function toggleKey(id,status){
-
-if(isExpired((await supabaseClient.from("license_keys")
-.select("expire_date").eq("id",id).single()).data.expire_date)){
-alert("Expired key cannot be activated");
-return;
-}
 
 await supabaseClient.from("license_keys")
 .update({status:status==="Active"?"Blocked":"Active"})
