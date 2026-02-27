@@ -1,702 +1,254 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LR OWNER PANEL</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LR OWNER PANEL</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        body {
-            background: linear-gradient(135deg, #0a0f1e 0%, #141b33 100%);
-            min-height: 100vh;
-            color: #e0e7ff;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .glass {
-            background: rgba(18, 28, 50, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 255, 255, 0.2);
-            border-radius: 24px;
-            box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1);
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 28px;
-            margin-bottom: 30px;
-            border-radius: 60px;
-        }
-
-        .header h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, #a5f0ff, #40e0ff);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .logout-btn {
-            background: rgba(255, 70, 70, 0.15);
-            border: 1.5px solid #ff4d4d;
-            color: #ffb8b8;
-            padding: 10px 28px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            font-size: 0.95rem;
-        }
-
-        .logout-btn:hover {
-            background: rgba(255, 70, 70, 0.3);
-            color: white;
-            border-color: #ff9999;
-        }
-
-        .role-badge {
-            display: inline-block;
-            background: rgba(0, 200, 255, 0.1);
-            border: 1px solid #0cf;
-            border-radius: 30px;
-            padding: 8px 22px;
-            font-weight: 500;
-            color: #a0f0ff;
-        }
-
-        .balance-badge {
-            background: rgba(255, 215, 0, 0.1);
-            border: 1px solid gold;
-            border-radius: 30px;
-            padding: 8px 22px;
-            color: #ffe484;
-            font-weight: 600;
-        }
-
-        .section-title {
-            font-size: 1.6rem;
-            font-weight: 500;
-            margin: 30px 0 20px 10px;
-            border-left: 6px solid #0cf;
-            padding-left: 20px;
-        }
-
-        .gen-card {
-            background: rgba(12, 22, 42, 0.8);
-            border-radius: 28px;
-            padding: 24px;
-            margin-bottom: 30px;
-            border: 1px solid #2d4b7a;
-        }
-
-        .gen-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: flex-end;
-        }
-
-        .gen-field {
-            flex: 1 1 180px;
-        }
-
-        .gen-field label {
-            display: block;
-            font-size: 0.85rem;
-            color: #aac3ff;
-            margin-bottom: 6px;
-            margin-left: 8px;
-        }
-
-        .gen-field input, .gen-field select {
-            width: 100%;
-            background: #0e1a2b;
-            border: 1.5px solid #2f4770;
-            border-radius: 40px;
-            padding: 12px 18px;
-            color: white;
-            font-size: 0.95rem;
-            outline: none;
-        }
-
-        .gen-field input:focus, .gen-field select:focus {
-            border-color: #0cf;
-        }
-
-        .gen-btn {
-            background: linear-gradient(145deg, #0066a0, #003f6b);
-            border: 1px solid #0cf;
-            border-radius: 40px;
-            padding: 12px 32px;
-            font-weight: 600;
-            color: white;
-            cursor: pointer;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
-            min-width: 140px;
-        }
-
-        .admin-card {
-            background: rgba(14, 25, 45, 0.9);
-            border-radius: 32px;
-            padding: 24px;
-            margin-bottom: 28px;
-            border: 1px solid #2e4a7a;
-        }
-
-        .admin-header {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .admin-email {
-            font-size: 1.3rem;
-            font-weight: 500;
-            color: #c3e0ff;
-        }
-
-        .stats {
-            display: flex;
-            gap: 24px;
-            margin: 15px 0;
-            flex-wrap: wrap;
-        }
-
-        .stat-item {
-            background: #11213a;
-            padding: 8px 20px;
-            border-radius: 40px;
-            border: 1px solid #3f5a85;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            margin: 20px 0 15px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 700px;
-        }
-
-        th {
-            text-align: left;
-            padding: 16px 12px;
-            color: #8fb4ff;
-            font-weight: 500;
-            border-bottom: 2px solid #2e4970;
-        }
-
-        td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #253b5a;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 14px;
-            border-radius: 40px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .status-active {
-            background: rgba(0, 200, 100, 0.2);
-            border: 1px solid #00d47e;
-            color: #b2ffe2;
-        }
-
-        .status-blocked {
-            background: rgba(220, 50, 50, 0.2);
-            border: 1px solid #ff5a5a;
-            color: #ffc2c2;
-        }
-
-        .status-expired {
-            background: rgba(100, 120, 150, 0.2);
-            border: 1px solid #7f9fcf;
-            color: #c6d9ff;
-        }
-
-        .action-btn {
-            background: none;
-            border: 1px solid #4e73a3;
-            border-radius: 30px;
-            padding: 5px 16px;
-            margin: 0 5px;
-            color: #c7dbff;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        .action-btn.block {
-            border-color: #ff7878;
-            color: #ffb3b3;
-        }
-
-        .login-container {
-            max-width: 420px;
-            margin: 100px auto;
-            padding: 40px;
-            border-radius: 48px;
-        }
-
-        .login-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 40px;
-        }
-
-        .login-input {
-            width: 100%;
-            background: #0f1a30;
-            border: 1.5px solid #2f4875;
-            border-radius: 50px;
-            padding: 16px 24px;
-            margin-bottom: 22px;
-            color: white;
-            font-size: 1rem;
-        }
-
-        .login-btn {
-            width: 100%;
-            background: linear-gradient(145deg, #0066a0, #003f6b);
-            border: 1px solid #0cf;
-            border-radius: 60px;
-            padding: 16px;
-            font-weight: 700;
-            font-size: 1.3rem;
-            color: white;
-            cursor: pointer;
-            box-shadow: 0 0 20px cyan;
-        }
-
-        .error-msg {
-            background: #ff3b3b20;
-            border: 1px solid #ff6f6f;
-            border-radius: 40px;
-            padding: 12px;
-            margin-top: 20px;
-            text-align: center;
-            color: #ffbaba;
-            display: none;
-        }
-
-        .add-admin-box {
-            background: rgba(0, 200, 255, 0.05);
-            border: 2px dashed #0cf;
-            border-radius: 50px;
-            padding: 30px;
-            margin-top: 30px;
-            text-align: center;
-        }
-
-        .flex {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-    </style>
+<style>
+body{
+background:linear-gradient(135deg,#0a0f1e,#141b33);
+color:#e0e7ff;
+font-family:Arial,Helvetica,sans-serif;
+padding:20px;
+}
+.hidden{display:none}
+.card{
+background:rgba(18,28,50,.8);
+padding:20px;
+border-radius:20px;
+margin-bottom:20px;
+}
+button{
+padding:8px 16px;
+border-radius:20px;
+cursor:pointer;
+border:none;
+}
+input,select{
+padding:8px;
+border-radius:10px;
+border:none;
+margin:4px 0;
+}
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+td,th{
+padding:8px;
+border-bottom:1px solid #2e4970;
+}
+</style>
 </head>
+
 <body>
-    <div class="container" id="app">
-        <!-- LOGIN PAGE -->
-        <div id="loginPage" class="login-container glass">
-            <h1 class="login-title">⚡ LR OWNER</h1>
-            <input type="email" id="loginEmail" class="login-input" placeholder="Email" autocomplete="off">
-            <input type="password" id="loginPassword" class="login-input" placeholder="Password">
-            <button class="login-btn" id="loginBtn">LOGIN</button>
-            <div id="loginError" class="error-msg"></div>
-        </div>
 
-        <!-- MAIN APP -->
-        <div id="mainApp" class="hidden">
-            <div class="header glass">
-                <h1 id="panelTitle">LR OWNER PANEL</h1>
-                <button class="logout-btn" id="logoutBtn">Logout</button>
-            </div>
+<div id="loginBox" class="card">
+<h2>LR OWNER LOGIN</h2>
+<input id="email" type="email" placeholder="Email"><br>
+<input id="password" type="password" placeholder="Password"><br>
+<button onclick="login()">Login</button>
+</div>
 
-            <!-- OWNER PANEL -->
-            <div id="ownerPanel" class="hidden">
-                <div class="section-title">OWNER KEYS</div>
-                <div class="gen-card">
-                    <div class="gen-row">
-                        <div class="gen-field">
-                            <label>User</label>
-                            <input type="text" id="ownerUser" placeholder="Enter username">
-                        </div>
-                        <div class="gen-field">
-                            <label>Manual Key (Optional)</label>
-                            <input type="text" id="ownerManualKey" placeholder="LR-XXXXXX">
-                        </div>
-                        <div class="gen-field">
-                            <label>Validity Number</label>
-                            <input type="number" id="ownerValidity" value="1" min="1">
-                        </div>
-                        <div class="gen-field">
-                            <label>Type</label>
-                            <select id="ownerValidityType">
-                                <option value="days">Days</option>
-                                <option value="hours">Hours</option>
-                            </select>
-                        </div>
-                        <div>
-                            <button class="gen-btn" id="ownerGenerateBtn">Generate Key</button>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table id="ownerKeysTable">
-                            <thead>
-                                <tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th></tr>
-                            </thead>
-                            <tbody id="ownerKeysBody"></tbody>
-                        </table>
-                    </div>
-                </div>
+<div id="panel" class="hidden">
 
-                <div class="section-title">ADMIN SECTIONS</div>
-                <div id="adminsContainer"></div>
+<div class="card">
+<h2 id="panelTitle"></h2>
+<button onclick="logout()">Logout</button>
+</div>
 
-                <div class="add-admin-box">
-                    <h3 style="margin-bottom: 20px; color: #a0f0ff;">➕ ADD NEW ADMIN</h3>
-                    <div class="flex">
-                        <input type="email" id="newAdminEmail" placeholder="Admin Email" style="flex:2; min-width:250px; background:#0f1a30; border:1px solid #0cf; border-radius:50px; padding:14px 20px; color:white;">
-                        <input type="password" id="newAdminPassword" placeholder="Password" style="flex:1; min-width:180px; background:#0f1a30; border:1px solid #0cf; border-radius:50px; padding:14px 20px; color:white;">
-                        <button class="gen-btn" id="addAdminBtn" style="flex:0 0 auto;">ADD ADMIN</button>
-                    </div>
-                </div>
-            </div>
+<div id="ownerSection" class="hidden card">
+<h3>Generate Key (Owner)</h3>
+<input id="o_user" placeholder="Username">
+<input id="o_valid" type="number" value="1">
+<select id="o_type">
+<option value="days">Days</option>
+<option value="hours">Hours</option>
+</select>
+<button onclick="generateKey(true)">Generate</button>
+<div id="ownerKeys"></div>
+<hr>
+<h3>Add Admin</h3>
+<input id="newEmail" placeholder="Admin Email">
+<input id="newPass" placeholder="Password">
+<button onclick="addAdmin()">Add</button>
+<div id="adminList"></div>
+</div>
 
-            <!-- ADMIN PANEL -->
-            <div id="adminPanel" class="hidden">
-                <div class="admin-card" style="margin-bottom:20px;">
-                    <div class="admin-header">
-                        <span class="admin-email" id="adminEmailDisplay"></span>
-                        <span class="balance-badge" id="adminBalanceDisplay">Balance ₹0</span>
-                    </div>
-                    <div class="stats">
-                        <span class="stat-item" id="adminTotalKeys">Total Key 0</span>
-                        <span class="stat-item" id="adminActiveKeys">Active Key 0</span>
-                        <span class="stat-item" id="adminBlockedKeys">Block Key 0</span>
-                    </div>
-                </div>
+<div id="adminSection" class="hidden card">
+<h3>Generate Key (Admin)</h3>
+<div id="balanceBox"></div>
+<input id="a_user" placeholder="Username">
+<input id="a_valid" type="number" value="1">
+<select id="a_type">
+<option value="days">Days</option>
+<option value="hours">Hours</option>
+</select>
+<button onclick="generateKey(false)">Generate</button>
+<div id="adminKeys"></div>
+</div>
 
-                <div class="gen-card">
-                    <div class="gen-row">
-                        <div class="gen-field">
-                            <label>User</label>
-                            <input type="text" id="adminUser" placeholder="Enter username">
-                        </div>
-                        <div class="gen-field">
-                            <label>Manual Key (Optional)</label>
-                            <input type="text" id="adminManualKey" placeholder="LR-XXXXXX">
-                        </div>
-                        <div class="gen-field">
-                            <label>Validity Number</label>
-                            <input type="number" id="adminValidity" value="1" min="1">
-                        </div>
-                        <div class="gen-field">
-                            <label>Type</label>
-                            <select id="adminValidityType">
-                                <option value="days">Days</option>
-                                <option value="hours">Hours</option>
-                            </select>
-                        </div>
-                        <div>
-                            <button class="gen-btn" id="adminGenerateBtn">Generate Key</button>
-                        </div>
-                    </div>
+</div>
 
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th></tr></thead>
-                            <tbody id="adminKeysBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<script>
 
-    <script>
-        (function() {
-            const SUPABASE_URL = 'https://dpskhodrzlnqczibolug.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs';
+const supabase = window.supabase.createClient(
+"https://dpskhodrzlnqczibolug.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
+);
 
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser=null;
 
-            let currentUser = null;
-            let currentUserRole = null;
-            let allProfiles = [];
-            let allKeys = [];
+window.onload=async()=>{
+const {data}=await supabase.auth.getSession();
+if(data.session?.user) loadUser(data.session.user.id);
+};
 
-            const loginPage = document.getElementById('loginPage');
-            const mainApp = document.getElementById('mainApp');
-            const ownerPanel = document.getElementById('ownerPanel');
-            const adminPanel = document.getElementById('adminPanel');
-            const panelTitle = document.getElementById('panelTitle');
+async function login(){
+const {error}=await supabase.auth.signInWithPassword({
+email:email.value,
+password:password.value
+});
+if(error) alert(error.message);
+else{
+const {data}=await supabase.auth.getSession();
+loadUser(data.session.user.id);
+}
+}
 
-            window.addEventListener('DOMContentLoaded', async () => {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    await loadUserData(session.user.id);
-                } else {
-                    showLogin();
-                }
-            });
+async function loadUser(id){
+const {data}=await supabase.from("profiles").select("*").eq("id",id).single();
+if(!data) return;
+if(data.is_blocked){alert("Blocked");logout();return;}
+currentUser=data;
+loginBox.classList.add("hidden");
+panel.classList.remove("hidden");
+panelTitle.innerText=data.role.toUpperCase()+" PANEL";
+if(data.role==="owner"){
+ownerSection.classList.remove("hidden");
+adminSection.classList.add("hidden");
+loadOwner();
+}else{
+adminSection.classList.remove("hidden");
+ownerSection.classList.add("hidden");
+loadAdmin();
+}
+}
 
-            document.getElementById('loginBtn').addEventListener('click', async () => {
-                const email = document.getElementById('loginEmail').value.trim();
-                const password = document.getElementById('loginPassword').value;
-                const errorDiv = document.getElementById('loginError');
+async function logout(){
+await supabase.auth.signOut();
+location.reload();
+}
 
-                if (!email || !password) {
-                    showError(errorDiv, 'Email and password required');
-                    return;
-                }
+function randomKey(){
+return "LR-"+Math.random().toString(36).substring(2,8).toUpperCase();
+}
 
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+async function generateKey(isOwner){
+const user=isOwner?o_user.value:a_user.value;
+const val=Number(isOwner?o_valid.value:a_valid.value);
+const type=isOwner?o_type.value:a_type.value;
+if(!val||val<1) return alert("Invalid");
 
-                if (error) {
-                    showError(errorDiv, error.message);
-                    return;
-                }
+let cost=type==="days"?val*100:val*10;
+if(!isOwner && currentUser.balance<cost)
+return alert("Insufficient Balance");
 
-                if (data.user) {
-                    await loadUserData(data.user.id);
-                }
-            });
+let exp=new Date();
+if(type==="days") exp.setDate(exp.getDate()+val);
+else exp.setHours(exp.getHours()+val);
 
-            async function loadUserData(userId) {
-                try {
-                    const { data: profile, error: profileError } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', userId)
-                        .single();
+await supabase.from("license_keys").insert({
+username:user,
+license_key:randomKey(),
+expire_date:exp,
+status:"Active",
+created_by:currentUser.id,
+key_type:type
+});
 
-                    if (profileError) throw profileError;
+if(!isOwner){
+await supabase.from("profiles")
+.update({balance:currentUser.balance-cost})
+.eq("id",currentUser.id);
+}
 
-                    currentUser = profile;
-                    currentUserRole = profile.role;
+location.reload();
+}
 
-                    if (profile.role === 'owner') {
-                        const [profilesRes, keysRes] = await Promise.all([
-                            supabase.from('profiles').select('*'),
-                            supabase.from('license_keys').select('*')
-                        ]);
-                        allProfiles = profilesRes.data || [];
-                        allKeys = keysRes.data || [];
-                    } else {
-                        allProfiles = [profile];
-                        const { data: keys } = await supabase
-                            .from('license_keys')
-                            .select('*')
-                            .eq('created_by', userId);
-                        allKeys = keys || [];
-                    }
+async function loadOwner(){
+loadKeys();
+const {data}=await supabase.from("profiles").select("*").eq("role","admin");
+adminList.innerHTML="<h4>Admins</h4>";
+data.forEach(a=>{
+adminList.innerHTML+=a.email+
+" | ₹"+a.balance+
+" <button onclick='blockAdmin(\""+a.id+"\")'>Block</button>"+
+" <button onclick='deleteAdmin(\""+a.id+"\")'>Delete</button><br>";
+});
+}
 
-                    showApp();
-                } catch (err) {
-                    console.error(err);
-                    alert('Failed to load user data');
-                    await supabase.auth.signOut();
-                    showLogin();
-                }
-            }
+async function loadAdmin(){
+balanceBox.innerText="Balance ₹"+currentUser.balance;
+loadKeys();
+}
 
-            function showLogin() {
-                loginPage.classList.remove('hidden');
-                mainApp.classList.add('hidden');
-            }
+async function loadKeys(){
+const {data}=await supabase.from("license_keys")
+.select("*")
+.eq("created_by",currentUser.id);
 
-            function showApp() {
-                loginPage.classList.add('hidden');
-                mainApp.classList.remove('hidden');
+let box=currentUser.role==="owner"?ownerKeys:adminKeys;
+box.innerHTML="";
+box.innerHTML="<table><tr><th>User</th><th>Key</th><th>Status</th></tr>";
+data.forEach(k=>{
+box.innerHTML+="<tr><td>"+k.username+"</td><td>"+k.license_key+"</td><td>"+k.status+"</td></tr>";
+});
+box.innerHTML+="</table>";
+}
 
-                if (currentUserRole === 'owner') {
-                    panelTitle.textContent = 'LR OWNER PANEL';
-                    ownerPanel.classList.remove('hidden');
-                    adminPanel.classList.add('hidden');
-                    renderOwnerPanel();
-                } else {
-                    panelTitle.textContent = 'ADMIN PANEL';
-                    adminPanel.classList.remove('hidden');
-                    ownerPanel.classList.add('hidden');
-                    renderAdminPanel();
-                }
-            }
+async function blockAdmin(id){
+await supabase.from("profiles")
+.update({is_blocked:true,status:"blocked"})
+.eq("id",id);
+await supabase.from("license_keys")
+.update({status:"Blocked"})
+.eq("created_by",id);
+location.reload();
+}
 
-            document.getElementById('logoutBtn').addEventListener('click', async () => {
-                await supabase.auth.signOut();
-                currentUser = null;
-                showLogin();
-            });
+async function deleteAdmin(id){
+await fetch("https://dpskhodrzlnqczibolug.functions.supabase.co/delete-admin",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer "+(await supabase.auth.getSession()).data.session.access_token
+},
+body:JSON.stringify({admin_id:id})
+});
+location.reload();
+}
 
-            function renderOwnerPanel() {
-                const ownerKeys = allKeys.filter(k => k.created_by === currentUser.id);
-                const ownerKeysBody = document.getElementById('ownerKeysBody');
-                ownerKeysBody.innerHTML = '';
+async function addAdmin(){
+const {data,error}=await supabase.auth.signUp({
+email:newEmail.value,
+password:newPass.value
+});
+if(error) return alert(error.message);
+await supabase.from("profiles").insert({
+id:data.user.id,
+email:newEmail.value,
+role:"admin",
+balance:1000,
+status:"active",
+is_blocked:false
+});
+location.reload();
+}
 
-                ownerKeys.forEach(k => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${k.username || '-'}</td>
-                        <td><code>${k.license_key}</code></td>
-                        <td>${new Date(k.expire_date).toLocaleString()}</td>
-                        <td><span class="status-badge status-${k.status.toLowerCase()}">${k.status}</span></td>
-                        <td>
-                            <button class="action-btn block" onclick="window.ownerBlockKey('${k.id}')">Block</button>
-                            <button class="action-btn" onclick="window.ownerDeleteKey('${k.id}')">Delete</button>
-                        </td>
-                    `;
-                    ownerKeysBody.appendChild(row);
-                });
-
-                const admins = allProfiles.filter(p => p.role === 'admin');
-                const container = document.getElementById('adminsContainer');
-                container.innerHTML = '';
-
-                admins.forEach(admin => {
-                    const adminKeys = allKeys.filter(k => k.created_by === admin.id);
-                    const total = adminKeys.length;
-                    const active = adminKeys.filter(k => k.status === 'Active').length;
-                    const blocked = adminKeys.filter(k => k.status === 'Blocked').length;
-
-                    const card = document.createElement('div');
-                    card.className = 'admin-card';
-                    card.innerHTML = `
-                        <div class="admin-header">
-                            <span class="admin-email">${admin.email}</span>
-                            <span class="balance-badge">Balance ₹${admin.balance || 0}</span>
-                        </div>
-                        <div class="stats">
-                            <span class="stat-item">Total Key: ${total}</span>
-                            <span class="stat-item">Active Key: ${active}</span>
-                            <span class="stat-item">Block Key: ${blocked}</span>
-                        </div>
-                        <div class="table-container">
-                            <table>
-                                <thead><tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th></tr></thead>
-                                <tbody id="admin-${admin.id}-keys"></tbody>
-                            </table>
-                        </div>
-                        <div style="margin-top:20px; display:flex; gap:15px;">
-                            <button class="action-btn block" onclick="window.toggleBlockAdmin('${admin.id}')">${admin.is_blocked ? 'Unblock Admin' : 'Block Admin'}</button>
-                            <button class="action-btn block" onclick="window.deleteAdmin('${admin.id}')">Delete Admin</button>
-                        </div>
-                    `;
-                    container.appendChild(card);
-
-                    const tbody = card.querySelector(`#admin-${admin.id}-keys`);
-                    if (tbody) {
-                        adminKeys.forEach(k => {
-                            const r = document.createElement('tr');
-                            r.innerHTML = `
-                                <td>${k.username || '-'}</td>
-                                <td><code>${k.license_key}</code></td>
-                                <td>${new Date(k.expire_date).toLocaleString()}</td>
-                                <td><span class="status-badge status-${k.status.toLowerCase()}">${k.status}</span></td>
-                                <td>
-                                    <button class="action-btn block" onclick="window.adminBlockKey('${k.id}')">Block</button>
-                                    <button class="action-btn" onclick="window.adminDeleteKey('${k.id}')">Delete</button>
-                                </td>
-                            `;
-                            tbody.appendChild(r);
-                        });
-                    }
-                });
-            }
-
-            function renderAdminPanel() {
-                document.getElementById('adminEmailDisplay').textContent = currentUser.email;
-                document.getElementById('adminBalanceDisplay').textContent = `Balance ₹${currentUser.balance || 0}`;
-
-                const adminKeys = allKeys.filter(k => k.created_by === currentUser.id);
-                const total = adminKeys.length;
-                const active = adminKeys.filter(k => k.status === 'Active').length;
-                const blocked = adminKeys.filter(k => k.status === 'Blocked').length;
-
-                document.getElementById('adminTotalKeys').textContent = `Total Key ${total}`;
-                document.getElementById('adminActiveKeys').textContent = `Active Key ${active}`;
-                document.getElementById('adminBlockedKeys').textContent = `Block Key ${blocked}`;
-
-                const tbody = document.getElementById('adminKeysBody');
-                tbody.innerHTML = '';
-                adminKeys.forEach(k => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${k.username || '-'}</td>
-                        <td><code>${k.license_key}</code></td>
-                        <td>${new Date(k.expire_date).toLocaleString()}</td>
-                        <td><span class="status-badge status-${k.status.toLowerCase()}">${k.status}</span></td>
-                        <td>
-                            <button class="action-btn block" onclick="window.adminBlockKey('${k.id}')">Block</button>
-                            <button class="action-btn" onclick="window.adminDeleteKey('${k.id}')">Delete</button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-
-            window.ownerBlockKey = (keyId) => alert('Block key ' + keyId);
-            window.ownerDeleteKey = (keyId) => alert('Delete key ' + keyId);
-            window.adminBlockKey = (keyId) => alert('Block key ' + keyId);
-            window.adminDeleteKey = (keyId) => alert('Delete key ' + keyId);
-            window.toggleBlockAdmin = (adminId) => alert('Toggle block admin ' + adminId);
-            window.deleteAdmin = (adminId) => alert('Delete admin ' + adminId);
-
-            document.getElementById('ownerGenerateBtn').addEventListener('click', () => {
-                alert('Generate owner key (edge function)');
-            });
-
-            document.getElementById('adminGenerateBtn').addEventListener('click', () => {
-                if (currentUser && currentUser.balance < 100) {
-                    alert('Insufficient balance');
-                    return;
-                }
-                alert('Generate admin key (deduct balance)');
-            });
-
-            document.getElementById('addAdminBtn').addEventListener('click', () => {
-                const email = document.getElementById('newAdminEmail').value;
-                const pass = document.getElementById('newAdminPassword').value;
-                if (!email || !pass) {
-                    alert('Email and password required');
-                    return;
-                }
-                alert(`Add admin ${email} (edge function)`);
-            });
-
-            function showError(el, msg) {
-                el.style.display = 'block';
-                el.textContent = msg;
-            }
-        })();
-    </script>
+</script>
 </body>
 </html>
