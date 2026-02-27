@@ -7,90 +7,93 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+
 body{
-background:linear-gradient(135deg,#0a0f1e,#141b33);
-color:#e0e7ff;
-font-family:Arial,Helvetica,sans-serif;
-padding:20px;
+height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+background:linear-gradient(135deg,#071226,#0f1f3d);
+color:white;
+}
+
+.glass{
+width:350px;
+padding:40px 30px;
+border-radius:25px;
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(15px);
+box-shadow:0 0 40px rgba(0,255,255,0.3);
+text-align:center;
+}
+
+h2{
+margin-bottom:30px;
+color:#4ffcff;
+}
+
+.input-group{
+margin-bottom:20px;
+text-align:left;
+}
+
+.input-group input{
+width:100%;
+padding:12px;
+background:transparent;
+border:none;
+border-bottom:2px solid rgba(255,255,255,0.3);
+color:white;
+outline:none;
+}
+
+.input-group input:focus{
+border-bottom:2px solid #4ffcff;
+}
+
+button{
+width:100%;
+padding:12px;
+border-radius:30px;
+border:none;
+background:linear-gradient(90deg,#00eaff,#0088ff);
+color:white;
+font-weight:bold;
+cursor:pointer;
+box-shadow:0 0 15px cyan;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.05);
+}
+
+#error{
+margin-top:15px;
+color:#ff6b6b;
+font-size:14px;
 }
 .hidden{display:none}
-.card{
-background:rgba(18,28,50,.8);
-padding:20px;
-border-radius:20px;
-margin-bottom:20px;
-}
-button{
-padding:8px 16px;
-border-radius:20px;
-cursor:pointer;
-border:none;
-}
-input,select{
-padding:8px;
-border-radius:10px;
-border:none;
-margin:4px 0;
-}
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
-td,th{
-padding:8px;
-border-bottom:1px solid #2e4970;
-}
 </style>
 </head>
 
 <body>
 
-<div id="loginBox" class="card">
-<h2>LR OWNER LOGIN</h2>
-<input id="email" type="email" placeholder="Email"><br>
-<input id="password" type="password" placeholder="Password"><br>
-<button onclick="login()">Login</button>
+<div class="glass" id="loginBox">
+<h2>LR OWNER PANEL</h2>
+
+<div class="input-group">
+<input type="email" id="email" placeholder="Email">
 </div>
 
-<div id="panel" class="hidden">
-
-<div class="card">
-<h2 id="panelTitle"></h2>
-<button onclick="logout()">Logout</button>
+<div class="input-group">
+<input type="password" id="password" placeholder="Password">
 </div>
 
-<div id="ownerSection" class="hidden card">
-<h3>Generate Key (Owner)</h3>
-<input id="o_user" placeholder="Username">
-<input id="o_valid" type="number" value="1">
-<select id="o_type">
-<option value="days">Days</option>
-<option value="hours">Hours</option>
-</select>
-<button onclick="generateKey(true)">Generate</button>
-<div id="ownerKeys"></div>
-<hr>
-<h3>Add Admin</h3>
-<input id="newEmail" placeholder="Admin Email">
-<input id="newPass" placeholder="Password">
-<button onclick="addAdmin()">Add</button>
-<div id="adminList"></div>
-</div>
+<button id="loginBtn">LOGIN</button>
 
-<div id="adminSection" class="hidden card">
-<h3>Generate Key (Admin)</h3>
-<div id="balanceBox"></div>
-<input id="a_user" placeholder="Username">
-<input id="a_valid" type="number" value="1">
-<select id="a_type">
-<option value="days">Days</option>
-<option value="hours">Hours</option>
-</select>
-<button onclick="generateKey(false)">Generate</button>
-<div id="adminKeys"></div>
-</div>
-
+<div id="error"></div>
 </div>
 
 <script>
@@ -100,155 +103,57 @@ const supabase = window.supabase.createClient(
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
-let currentUser=null;
+const loginBtn = document.getElementById("loginBtn");
+const errorBox = document.getElementById("error");
 
-window.onload=async()=>{
-const {data}=await supabase.auth.getSession();
-if(data.session?.user) loadUser(data.session.user.id);
-};
+loginBtn.addEventListener("click", login);
+
+/* ---------- Auto Session Check ---------- */
+
+window.addEventListener("DOMContentLoaded", async () => {
+const { data } = await supabase.auth.getSession();
+if(data.session){
+alert("Already Logged In");
+}
+});
+
+/* ---------- Login Function ---------- */
 
 async function login(){
-const {error}=await supabase.auth.signInWithPassword({
-email:email.value,
-password:password.value
-});
-if(error) alert(error.message);
-else{
-const {data}=await supabase.auth.getSession();
-loadUser(data.session.user.id);
-}
-}
 
-async function loadUser(id){
-const {data}=await supabase.from("profiles").select("*").eq("id",id).single();
-if(!data) return;
-if(data.is_blocked){alert("Blocked");logout();return;}
-currentUser=data;
-loginBox.classList.add("hidden");
-panel.classList.remove("hidden");
-panelTitle.innerText=data.role.toUpperCase()+" PANEL";
-if(data.role==="owner"){
-ownerSection.classList.remove("hidden");
-adminSection.classList.add("hidden");
-loadOwner();
-}else{
-adminSection.classList.remove("hidden");
-ownerSection.classList.add("hidden");
-loadAdmin();
-}
+const emailVal = document.getElementById("email").value.trim();
+const passVal = document.getElementById("password").value;
+
+errorBox.textContent = "";
+
+if(!emailVal || !passVal){
+errorBox.textContent = "Email / Password required";
+return;
 }
 
-async function logout(){
-await supabase.auth.signOut();
-location.reload();
-}
+loginBtn.innerText = "Logging...";
+loginBtn.disabled = true;
 
-function randomKey(){
-return "LR-"+Math.random().toString(36).substring(2,8).toUpperCase();
-}
-
-async function generateKey(isOwner){
-const user=isOwner?o_user.value:a_user.value;
-const val=Number(isOwner?o_valid.value:a_valid.value);
-const type=isOwner?o_type.value:a_type.value;
-if(!val||val<1) return alert("Invalid");
-
-let cost=type==="days"?val*100:val*10;
-if(!isOwner && currentUser.balance<cost)
-return alert("Insufficient Balance");
-
-let exp=new Date();
-if(type==="days") exp.setDate(exp.getDate()+val);
-else exp.setHours(exp.getHours()+val);
-
-await supabase.from("license_keys").insert({
-username:user,
-license_key:randomKey(),
-expire_date:exp,
-status:"Active",
-created_by:currentUser.id,
-key_type:type
+const { error } = await supabase.auth.signInWithPassword({
+email: emailVal,
+password: passVal
 });
 
-if(!isOwner){
-await supabase.from("profiles")
-.update({balance:currentUser.balance-cost})
-.eq("id",currentUser.id);
+if(error){
+errorBox.textContent = error.message;
+loginBtn.innerText = "LOGIN";
+loginBtn.disabled = false;
+return;
 }
 
-location.reload();
-}
+alert("Login Successful");
 
-async function loadOwner(){
-loadKeys();
-const {data}=await supabase.from("profiles").select("*").eq("role","admin");
-adminList.innerHTML="<h4>Admins</h4>";
-data.forEach(a=>{
-adminList.innerHTML+=a.email+
-" | ₹"+a.balance+
-" <button onclick='blockAdmin(\""+a.id+"\")'>Block</button>"+
-" <button onclick='deleteAdmin(\""+a.id+"\")'>Delete</button><br>";
-});
-}
+loginBtn.innerText = "LOGIN";
+loginBtn.disabled = false;
 
-async function loadAdmin(){
-balanceBox.innerText="Balance ₹"+currentUser.balance;
-loadKeys();
-}
-
-async function loadKeys(){
-const {data}=await supabase.from("license_keys")
-.select("*")
-.eq("created_by",currentUser.id);
-
-let box=currentUser.role==="owner"?ownerKeys:adminKeys;
-box.innerHTML="";
-box.innerHTML="<table><tr><th>User</th><th>Key</th><th>Status</th></tr>";
-data.forEach(k=>{
-box.innerHTML+="<tr><td>"+k.username+"</td><td>"+k.license_key+"</td><td>"+k.status+"</td></tr>";
-});
-box.innerHTML+="</table>";
-}
-
-async function blockAdmin(id){
-await supabase.from("profiles")
-.update({is_blocked:true,status:"blocked"})
-.eq("id",id);
-await supabase.from("license_keys")
-.update({status:"Blocked"})
-.eq("created_by",id);
-location.reload();
-}
-
-async function deleteAdmin(id){
-await fetch("https://dpskhodrzlnqczibolug.functions.supabase.co/delete-admin",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-"Authorization":"Bearer "+(await supabase.auth.getSession()).data.session.access_token
-},
-body:JSON.stringify({admin_id:id})
-});
-location.reload();
-}
-
-async function addAdmin(){
-const {data,error}=await supabase.auth.signUp({
-email:newEmail.value,
-password:newPass.value
-});
-if(error) return alert(error.message);
-await supabase.from("profiles").insert({
-id:data.user.id,
-email:newEmail.value,
-role:"admin",
-balance:1000,
-status:"active",
-is_blocked:false
-});
-location.reload();
 }
 
 </script>
+
 </body>
 </html>
