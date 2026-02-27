@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>LR OWNER PANEL</title>
+<title>LR CONTROL PANEL</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -13,6 +13,15 @@ background:linear-gradient(135deg,#050510,#0f0f1f);
 color:white;
 }
 
+.title{
+text-align:center;
+font-size:32px;
+font-weight:bold;
+color:#00ffff;
+text-shadow:0 0 15px #00ffff;
+margin:25px 0;
+}
+
 .glass{
 background:rgba(255,255,255,0.05);
 backdrop-filter:blur(15px);
@@ -21,15 +30,6 @@ box-shadow:0 0 30px rgba(0,255,255,0.15);
 border-radius:18px;
 padding:25px;
 margin-bottom:30px;
-}
-
-.title{
-text-align:center;
-font-size:32px;
-font-weight:bold;
-color:#00ffff;
-text-shadow:0 0 15px #00ffff;
-margin-bottom:25px;
 }
 
 input,select{
@@ -90,7 +90,8 @@ color:#00ff9d;
 font-weight:bold;
 }
 
-.center{ text-align:center; }
+.center{text-align:center;}
+.clear{clear:both;}
 </style>
 </head>
 
@@ -107,7 +108,7 @@ font-weight:bold;
 <div id="panel" class="hidden" style="max-width:1200px;margin:auto;">
 
 <button class="btn-logout" onclick="logout()">LOG OUT</button>
-<div style="clear:both;"></div>
+<div class="clear"></div>
 
 <div id="ownerSection"></div>
 <div id="adminSections"></div>
@@ -137,8 +138,8 @@ if(data.session) init();
 
 async function login(){
 const {error}=await supabase.auth.signInWithPassword({
-email:email.value,
-password:password.value
+email:email.value.trim(),
+password:password.value.trim()
 });
 if(error){alert(error.message);return;}
 init();
@@ -148,16 +149,18 @@ async function init(){
 const {data:{user}}=await supabase.auth.getUser();
 currentUser=user;
 
-const {data}=await supabase.from("profiles")
+const {data,error}=await supabase.from("profiles")
 .select("*").eq("id",user.id).single();
 
-userProfile=data;
+if(error){alert("Profile not found");return;}
 
 if(data.status==="blocked"){
-alert("Blocked");
-logout();
+alert("You are blocked");
+await logout();
 return;
 }
+
+userProfile=data;
 
 loginBox.classList.add("hidden");
 panel.classList.remove("hidden");
@@ -174,38 +177,49 @@ function randomKey(){
 return "LR-"+Math.floor(100000+Math.random()*900000);
 }
 
-async function loadPanel(){
+function calculateCost(type,value){
+return type==="days" ? value*100 : value*10;
+}
 
+function isExpired(date){
+return new Date(date) < new Date();
+}
+
+async function loadPanel(){
 ownerSection.innerHTML="";
 adminSections.innerHTML="";
 
 if(userProfile.role==="owner"){
 addAdminBox.classList.remove("hidden");
-loadOwnerKeys();
-loadAdmins();
+await loadOwnerKeys();
+await loadAdmins();
 }else{
-loadAdminOwn();
+addAdminBox.classList.add("hidden");
+await loadAdminOwn();
 }
 }
 
 async function loadOwnerKeys(){
-
 const {data}=await supabase.from("license_keys")
 .select("*").order("id",{ascending:false});
 
-let html=`<div class="glass"><h3>Owner Keys</h3>
+let html=`<div class="glass"><h3>All Keys</h3>
 <table><tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th></tr>`;
 
 data.forEach(k=>{
-let expired=new Date(k.expire_date)<new Date();
+let expired=isExpired(k.expire_date);
 let status=expired?"Expired":k.status;
+let cls=expired?"blue":(k.status==="Active"?"green":"red");
+
 html+=`<tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
 <td>${expired?"Expired":new Date(k.expire_date).toLocaleString()}</td>
-<td class="${expired?"blue":(k.status==="Active"?"green":"red")}">${status}</td>
+<td class="${cls}">${status}</td>
 <td>
-<button class="btn-block" onclick="toggleKey(${k.id},'${k.status}')">Toggle</button>
+<button class="btn-block" onclick="toggleKey(${k.id},'${k.status}')">
+${k.status==="Active"?"Block":"Unblock"}
+</button>
 <button class="btn-danger" onclick="deleteKey(${k.id})">Delete</button>
 </td>
 </tr>`;
@@ -216,7 +230,6 @@ ownerSection.innerHTML=html;
 }
 
 async function loadAdmins(){
-
 const {data}=await supabase.from("profiles")
 .select("*").eq("role","admin");
 
@@ -244,7 +257,6 @@ adminSections.innerHTML+=box;
 }
 
 async function loadAdminOwn(){
-
 const {data}=await supabase.from("license_keys")
 .select("*").eq("created_by",currentUser.id);
 
@@ -252,11 +264,13 @@ let html=`<div class="glass"><h3>Your Keys</h3>
 <table><tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th></tr>`;
 
 data.forEach(k=>{
+let expired=isExpired(k.expire_date);
+let status=expired?"Expired":k.status;
 html+=`<tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
-<td>${new Date(k.expire_date).toLocaleString()}</td>
-<td>${k.status}</td>
+<td>${expired?"Expired":new Date(k.expire_date).toLocaleString()}</td>
+<td>${status}</td>
 </tr>`;
 });
 
@@ -271,22 +285,29 @@ loadPanel();
 }
 
 async function deleteKey(id){
+if(!confirm("Delete?"))return;
 await supabase.from("license_keys").delete().eq("id",id);
 loadPanel();
 }
 
 async function toggleAdmin(id,status){
 let newStatus=status==="blocked"?"active":"blocked";
+
 await supabase.from("profiles").update({status:newStatus}).eq("id",id);
+
 if(newStatus==="blocked"){
 await supabase.from("license_keys")
 .update({status:"Blocked"}).eq("created_by",id);
 }
+
 loadPanel();
 }
 
 async function deleteAdmin(adminId){
+if(!confirm("Delete Admin?"))return;
+
 const {data:session}=await supabase.auth.getSession();
+
 await fetch("https://dpskhodrzlnqczibolug.supabase.co/functions/v1/delete-admin",{
 method:"POST",
 headers:{
@@ -295,26 +316,27 @@ headers:{
 },
 body:JSON.stringify({admin_id:adminId})
 });
+
 loadPanel();
 }
 
 async function addAdmin(){
 
 const {data:exist}=await supabase.from("profiles")
-.select("*").eq("email",newEmail.value);
+.select("*").eq("email",newEmail.value.trim());
 
 if(exist.length>0){alert("Admin already exists");return;}
 
 const {data,error}=await supabase.auth.signUp({
-email:newEmail.value,
-password:newPassword.value
+email:newEmail.value.trim(),
+password:newPassword.value.trim()
 });
 
 if(error){alert(error.message);return;}
 
 await supabase.from("profiles").insert([{
 id:data.user.id,
-email:newEmail.value,
+email:newEmail.value.trim(),
 role:"admin",
 balance:1000,
 status:"active"
@@ -325,5 +347,6 @@ loadPanel();
 }
 
 </script>
+
 </body>
 </html>
