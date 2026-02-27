@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>LR Owner Panel</title>
+<title>LR OWNER PANEL</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -15,11 +15,6 @@ input{padding:10px;margin:5px 0;width:100%;border:none;border-radius:5px;}
 button{padding:10px;margin-top:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;}
 .main-btn{width:100%;background:#00ffff;color:black;}
 .logout-btn{background:red;color:white;width:100%;}
-.delete-btn{background:#ff2e2e;color:white;}
-table{width:100%;margin-top:15px;border-collapse:collapse;}
-th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
-.status-active{color:#00ff88;}
-.status-block{color:red;}
 </style>
 </head>
 
@@ -36,37 +31,22 @@ th,td{padding:10px;text-align:center;border-bottom:1px solid #333;}
 <button class="main-btn" onclick="login()">Login</button>
 </div>
 
-<div id="mainPanel" style="display:none;">
-
+<div id="ownerPanel" style="display:none;">
 <div class="card">
-<button class="logout-btn" onclick="logout()">Logout</button>
+<h3>OWNER PANEL</h3>
+<p id="ownerEmail"></p>
+<button class="logout-btn" onclick="logout()">LOG OUT</button>
+</div>
 </div>
 
+<div id="adminPanel" style="display:none;">
 <div class="card">
-<h3>Generate License Key</h3>
-<input type="text" id="username" placeholder="User Name">
-<input type="number" id="days" placeholder="Validity (Days)">
-<button class="main-btn" onclick="generateKey()">Generate Key</button>
+<h3>ADMIN PANEL</h3>
+<p id="adminEmail"></p>
+<button class="logout-btn" onclick="logout()">LOG OUT</button>
+</div>
 </div>
 
-<div class="card">
-<h3>Active Keys</h3>
-<table>
-<thead>
-<tr>
-<th>User</th>
-<th>Key</th>
-<th>Expire</th>
-<th>Status</th>
-<th>Block</th>
-<th>Delete</th>
-</tr>
-</thead>
-<tbody id="keyTable"></tbody>
-</table>
-</div>
-
-</div>
 </div>
 
 <script>
@@ -75,15 +55,14 @@ const { createClient } = supabase;
 
 const client = createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
+"sb_publishable_slJiDSH_dv0jCErcO8j0-A__ebbJItK"
 );
 
 // SESSION CHECK
 document.addEventListener("DOMContentLoaded", async () => {
 const { data } = await client.auth.getSession();
 if(data.session){
-showPanel();
-loadKeys();
+await checkProfile(data.session.user.id);
 }
 });
 
@@ -98,129 +77,58 @@ alert("Enter Email & Password");
 return;
 }
 
-const { error } = await client.auth.signInWithPassword({ email, password });
+const { data, error } = await client.auth.signInWithPassword({ email, password });
 
 if(error){
 alert(error.message);
 return;
 }
 
-showPanel();
-loadKeys();
+await checkProfile(data.user.id);
+}
+
+// CHECK ROLE + BLOCK STATUS
+async function checkProfile(userId){
+
+const { data, error } = await client
+.from("profiles")
+.select("*")
+.eq("id", userId)
+.single();
+
+if(error || !data){
+alert("Profile not found");
+await logout();
+return;
+}
+
+// BLOCK CHECK
+if(data.is_blocked === true || data.status !== "active"){
+alert("Account Blocked");
+await logout();
+return;
+}
+
+document.getElementById("loginSection").style.display="none";
+
+if(data.role === "owner"){
+document.getElementById("ownerPanel").style.display="block";
+document.getElementById("ownerEmail").innerText = data.email;
+}
+else if(data.role === "admin"){
+document.getElementById("adminPanel").style.display="block";
+document.getElementById("adminEmail").innerText = data.email;
+}
+else{
+alert("Invalid Role");
+await logout();
+}
 }
 
 // LOGOUT
 async function logout(){
 await client.auth.signOut();
 location.reload();
-}
-
-function showPanel(){
-document.getElementById("loginSection").style.display="none";
-document.getElementById("mainPanel").style.display="block";
-}
-
-// RANDOM KEY
-function randomKey(){
-return "LR-" + Math.floor(Math.random()*1000000);
-}
-
-// GENERATE KEY
-async function generateKey(){
-
-let user = document.getElementById("username").value.trim();
-let days = parseInt(document.getElementById("days").value);
-
-if(!user || isNaN(days)){
-alert("Fill all fields");
-return;
-}
-
-let key = randomKey();
-let expireDate = new Date();
-expireDate.setDate(expireDate.getDate() + days);
-
-const { error } = await client
-.from("license_keys")
-.insert([{
-username:user,
-license_key:key,
-expire_date:expireDate,
-status:"Active"
-}]);
-
-if(error){
-alert(error.message);
-return;
-}
-
-loadKeys();
-}
-
-// LOAD KEYS
-async function loadKeys(){
-
-let { data, error } = await client
-.from("license_keys")
-.select("*")
-.order("id",{ascending:false});
-
-if(error){
-alert(error.message);
-return;
-}
-
-let table = document.getElementById("keyTable");
-table.innerHTML="";
-
-data.forEach(k=>{
-table.innerHTML += `
-<tr>
-<td>${k.username}</td>
-<td>${k.license_key}</td>
-<td>${new Date(k.expire_date).toLocaleDateString()}</td>
-<td class="${k.status=="Active" ? "status-active" : "status-block"}">${k.status}</td>
-<td>
-<button onclick="toggleStatus(${k.id},'${k.status}')">
-${k.status=="Active" ? "Block" : "Unblock"}
-</button>
-</td>
-<td>
-<button class="delete-btn" onclick="deleteKey(${k.id})">
-Delete
-</button>
-</td>
-</tr>
-`;
-});
-}
-
-// BLOCK / UNBLOCK
-async function toggleStatus(id,current){
-
-let newStatus = current=="Active" ? "Blocked" : "Active";
-
-await client
-.from("license_keys")
-.update({status:newStatus})
-.eq("id",id);
-
-loadKeys();
-}
-
-// DELETE KEY
-async function deleteKey(id){
-
-let confirmDelete = confirm("Delete this key permanently?");
-
-if(!confirmDelete) return;
-
-await client
-.from("license_keys")
-.delete()
-.eq("id",id);
-
-loadKeys();
 }
 
 </script>
