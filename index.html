@@ -55,7 +55,7 @@ const supabaseClient = window.supabase.createClient(
 let currentUser=null;
 let profile=null;
 
-/* ===== LOGIN ===== */
+/* LOGIN */
 document.getElementById("loginBtn").addEventListener("click", async ()=>{
 const email=loginEmail.value.trim();
 const password=loginPassword.value.trim();
@@ -65,14 +65,11 @@ if(error){alert(error.message);return;}
 loadSession();
 });
 
-/* ===== AUTO SESSION ===== */
 supabaseClient.auth.getSession().then(({data})=>{
 if(data.session) loadSession();
 });
 
-/* ===== LOAD SESSION ===== */
 async function loadSession(){
-
 const {data:{user}}=await supabaseClient.auth.getUser();
 if(!user)return;
 
@@ -92,7 +89,6 @@ panel.classList.remove("hidden");
 renderPanel();
 }
 
-/* ===== LOGOUT ===== */
 async function logout(){
 await supabaseClient.auth.signOut();
 location.reload();
@@ -100,22 +96,18 @@ location.reload();
 
 function isExpired(d){return new Date(d)<new Date();}
 
-/* ===== MAIN RENDER ===== */
 async function renderPanel(){
 content.innerHTML="";
 if(profile.role==="owner") await renderOwner();
 else await renderAdmin();
 }
 
-/* ===== OWNER PANEL ===== */
+/* OWNER PANEL */
 async function renderOwner(){
 
 let html="";
-
-/* GENERATE SECTION */
 html+=generateSection("owner");
 
-/* OWNER KEYS */
 const {data:ownerKeys}=await supabaseClient
 .from("license_keys")
 .select("*").eq("created_by",currentUser.id)
@@ -123,7 +115,6 @@ const {data:ownerKeys}=await supabaseClient
 
 html+=buildTable("Owner Keys",ownerKeys,false);
 
-/* ADMINS */
 const {data:admins}=await supabaseClient
 .from("profiles").select("*").eq("role","admin");
 
@@ -154,7 +145,7 @@ html+=addAdminHTML();
 content.innerHTML=html;
 }
 
-/* ===== ADMIN PANEL ===== */
+/* ADMIN PANEL (FIXED BALANCE DISPLAY) */
 async function renderAdmin(){
 
 const {data:fresh}=await supabaseClient
@@ -163,7 +154,13 @@ const {data:fresh}=await supabaseClient
 
 profile=fresh;
 
-let html=generateSection("admin");
+let html=`<div class="glass">
+<h3>${profile.email}</h3>
+<div class="balance">Balance: ₹${profile.balance}</div>
+<div class="clear"></div>
+</div>`;
+
+html+=generateSection("admin");
 
 const {data:keys}=await supabaseClient
 .from("license_keys")
@@ -175,7 +172,6 @@ html+=buildTable("Your Keys",keys,true);
 content.innerHTML=html;
 }
 
-/* ===== GENERATE UI ===== */
 function generateSection(type){
 return `<div class="glass">
 <h3>Generate Key</h3>
@@ -190,7 +186,6 @@ return `<div class="glass">
 </div>`;
 }
 
-/* ===== TABLE ===== */
 function buildTable(title,data,actions){
 let html=`<div class="glass"><h3>${title}</h3>
 <table>
@@ -223,7 +218,7 @@ html+="</table></div>";
 return html;
 }
 
-/* ===== GENERATE KEY ===== */
+/* FIXED BALANCE DEDUCTION */
 async function generateKey(type){
 
 const u=document.getElementById(`user_${type}`).value.trim();
@@ -237,10 +232,16 @@ let cost=t==="days"?v*100:v*10;
 
 if(profile.role==="admin"){
 if(profile.balance<cost){alert("Insufficient Balance");return;}
+
 await supabaseClient.from("profiles")
 .update({balance:profile.balance-cost})
 .eq("id",currentUser.id);
-profile.balance-=cost;
+
+const {data:updated}=await supabaseClient
+.from("profiles").select("*")
+.eq("id",currentUser.id).single();
+
+profile=updated;
 }
 
 let key=m||("LR-"+Math.floor(100000+Math.random()*900000));
@@ -259,42 +260,10 @@ created_by:currentUser.id
 renderPanel();
 }
 
-/* ===== KEY ACTIONS ===== */
-async function toggleKey(id,status){
-await supabaseClient.from("license_keys")
-.update({status:status==="Active"?"Blocked":"Active"})
-.eq("id",id);
-renderPanel();
-}
-
-async function deleteKey(id){
-if(!confirm("Delete?"))return;
-await supabaseClient.from("license_keys").delete().eq("id",id);
-renderPanel();
-}
-
-/* ===== ADMIN CONTROL ===== */
-async function toggleAdmin(id,status){
-
-if(profile.id===id){alert("Owner cannot modify self");return;}
-
-let newStatus=status==="blocked"?"active":"blocked";
-
-await supabaseClient.from("profiles")
-.update({status:newStatus}).eq("id",id);
-
-if(newStatus==="blocked"){
-await supabaseClient.from("license_keys")
-.update({status:"Blocked"}).eq("created_by",id);
-}
-
-renderPanel();
-}
-
+/* FIXED DELETE ADMIN */
 async function deleteAdmin(id){
 
 if(profile.id===id){alert("Owner cannot delete self");return;}
-
 if(!confirm("Delete Admin?"))return;
 
 const {data:session}=await supabaseClient.auth.getSession();
@@ -305,17 +274,21 @@ const res=await fetch(
 method:"POST",
 headers:{
 "Content-Type":"application/json",
-"Authorization":"Bearer "+session.session.access_token
+"Authorization":"Bearer "+session.session.access_token,
+"apikey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 },
 body:JSON.stringify({admin_id:id})
 });
 
-if(!res.ok){alert("Delete failed");return;}
+if(!res.ok){
+const err=await res.text();
+alert("Delete failed: "+err);
+return;
+}
 
 renderPanel();
 }
 
-/* ===== ADD ADMIN ===== */
 function addAdminHTML(){
 return `<div class="glass">
 <h3>Add Admin</h3>
