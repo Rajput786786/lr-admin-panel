@@ -7,32 +7,38 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
-header{padding:25px;text-align:center;font-size:36px;font-weight:bold;background:#111;color:#00ffff;}
+header{padding:20px;text-align:center;font-size:32px;font-weight:bold;background:#111;color:#00ffff;position:relative;}
+.logout-top{
+position:absolute;right:20px;top:15px;
+background:red;color:white;
+padding:10px 18px;border:none;
+border-radius:8px;font-weight:bold;cursor:pointer;
+}
 .container{padding:20px;max-width:1200px;margin:auto;}
-.card{background:#151528;padding:20px;border-radius:12px;margin-bottom:25px;box-shadow:0 0 20px #00f5ff22;}
+.card{background:#151528;padding:20px;border-radius:12px;margin-bottom:25px;box-shadow:0 0 25px #00f5ff22;}
 input,select{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
 button{padding:8px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
 .owner-btn{background:#00f5ff;color:black;}
-.admin-btn{background:#00ff9d;color:black;}
 .danger-btn{background:red;color:white;}
 .block-btn{background:#888;color:black;}
-.logout-btn{background:red;color:white;width:100%;}
-table{width:100%;margin-top:15px;border-collapse:collapse;}
-th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;}
 .status-active{color:#00ff9d;}
 .status-block{color:red;}
+.status-expired{color:#00aaff;}
 .hidden{display:none;}
-.section-title{font-size:22px;font-weight:bold;margin-bottom:15px;color:#00ffff;}
-.admin-box{background:#111122;border:1px solid #00ffff33;padding:20px;border-radius:12px;margin-top:20px;}
-.big-email{color:#ffcc00;font-size:18px;font-weight:bold;}
+.section-title{font-size:20px;font-weight:bold;margin-bottom:15px;color:#00ffff;}
+.admin-box{background:#111122;border:1px solid #00ffff33;padding:15px;border-radius:12px;margin-top:20px;}
 .balance{float:right;color:#00ff9d;font-weight:bold;}
-.clear{clear:both;}
+table{width:100%;margin-top:10px;border-collapse:collapse;}
+th,td{padding:6px;text-align:center;border-bottom:1px solid #222;font-size:12px;}
 </style>
 </head>
 
 <body>
 
-<header>LR CONTROL PANEL</header>
+<header>
+LR OWNER PANEL
+<button id="logoutBtn" class="logout-top hidden" onclick="logout()">LOG OUT</button>
+</header>
 
 <div class="container">
 
@@ -44,11 +50,7 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 
 <div id="mainPanel" class="hidden">
 
-<div class="card">
-<button class="logout-btn" onclick="logout()">Logout</button>
-</div>
-
-<div class="card">
+<div class="card" id="generateSection">
 <div class="section-title">GENERATE KEY</div>
 
 <input type="text" id="username" placeholder="Username">
@@ -72,12 +74,12 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 </table>
 </div>
 
-<div class="card hidden" id="adminSection">
+<div id="adminSection" class="card hidden">
 <div class="section-title">ADMIN MANAGEMENT</div>
 <div id="adminList"></div>
 </div>
 
-<div class="card hidden" id="addAdminSection">
+<div id="addAdminBox" class="card hidden">
 <div class="section-title">ADD NEW ADMIN</div>
 <input type="email" id="newAdminEmail" placeholder="Admin Email">
 <input type="password" id="newAdminPassword" placeholder="Admin Password">
@@ -91,16 +93,18 @@ th,td{padding:8px;text-align:center;border-bottom:1px solid #222;font-size:13px;
 
 const client = supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6ImFub24i"
 );
 
 let currentUser;
 let currentProfile;
 
+/* SESSION PERSIST */
 client.auth.getSession().then(({data})=>{
 if(data.session){ initUser(); }
 });
 
+/* LOGIN */
 async function login(){
 const { error } = await client.auth.signInWithPassword({
 email:loginEmail.value,
@@ -110,6 +114,7 @@ if(error){ alert(error.message); return; }
 initUser();
 }
 
+/* INIT */
 async function initUser(){
 const { data:{user} } = await client.auth.getUser();
 currentUser=user;
@@ -117,33 +122,37 @@ currentUser=user;
 let { data } = await client.from("profiles").select("*").eq("id",user.id).single();
 currentProfile=data;
 
-if(data.status==="blocked"){
-alert("You are blocked");
+if(!data || data.status==="blocked"){
+alert("Access Denied");
 logout();
 return;
 }
 
 loginSection.classList.add("hidden");
 mainPanel.classList.remove("hidden");
-
-loadKeys();
+logoutBtn.classList.remove("hidden");
 
 if(data.role==="owner"){
 adminSection.classList.remove("hidden");
-addAdminSection.classList.remove("hidden");
+addAdminBox.classList.remove("hidden");
 loadAdmins();
 }
+
+loadKeys();
 }
 
+/* LOGOUT */
 async function logout(){
 await client.auth.signOut();
 location.reload();
 }
 
+/* RANDOM KEY */
 function randomKey(){
 return "LR-"+Math.floor(100000+Math.random()*900000);
 }
 
+/* GENERATE */
 async function generateKey(){
 
 let user=username.value;
@@ -153,11 +162,12 @@ let type=validityType.value;
 
 if(!user||!value){ alert("Fill fields"); return; }
 
-let cost = type==="days" ? value*100 : value*10;
+let cost = type==="days"? value*100 : value*10;
 
 if(currentProfile.role==="admin"){
 if(currentProfile.balance < cost){
-alert("Insufficient Balance");
+let possible = Math.floor(currentProfile.balance/(type==="days"?100:10));
+alert("Insufficient Balance. You can create only "+possible+" "+type);
 return;
 }
 await client.from("profiles")
@@ -167,8 +177,8 @@ currentProfile.balance -= cost;
 }
 
 let expire=new Date();
-if(type==="days"){ expire.setDate(expire.getDate()+value); }
-else{ expire.setHours(expire.getHours()+value); }
+if(type==="days") expire.setDate(expire.getDate()+value);
+else expire.setHours(expire.getHours()+value);
 
 await client.from("license_keys").insert([{
 username:user,
@@ -179,25 +189,30 @@ created_by:currentUser.id
 }]);
 
 loadKeys();
-if(currentProfile.role==="owner"){ loadAdmins(); }
+if(currentProfile.role==="owner") loadAdmins();
 }
 
+/* LOAD KEYS */
 async function loadKeys(){
-
 let { data } = await client.from("license_keys")
 .select("*")
 .eq("created_by",currentUser.id)
 .order("id",{ascending:false});
 
 keyTable.innerHTML="";
+
 if(data){
 data.forEach(k=>{
+let expired = new Date(k.expire_date) < new Date();
+let statusText = expired? "Expired" : k.status;
+let statusClass = expired? "status-expired" : (k.status==="Active"?"status-active":"status-block");
+
 keyTable.innerHTML+=`
 <tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
-<td>${new Date(k.expire_date).toLocaleString()}</td>
-<td class="${k.status==="Active"?"status-active":"status-block"}">${k.status}</td>
+<td>${expired?"Expired":new Date(k.expire_date).toLocaleString()}</td>
+<td class="${statusClass}">${statusText}</td>
 <td>
 <button class="block-btn" onclick="toggleKey(${k.id},'${k.status}')">
 ${k.status==="Active"?"Block":"Unblock"}
@@ -209,20 +224,23 @@ ${k.status==="Active"?"Block":"Unblock"}
 }
 }
 
+/* TOGGLE KEY */
 async function toggleKey(id,status){
 let newStatus=status==="Active"?"Blocked":"Active";
 await client.from("license_keys").update({status:newStatus}).eq("id",id);
 loadKeys();
-if(currentProfile.role==="owner"){ loadAdmins(); }
+if(currentProfile.role==="owner") loadAdmins();
 }
 
+/* DELETE KEY */
 async function deleteKey(id){
 if(!confirm("Delete?")) return;
 await client.from("license_keys").delete().eq("id",id);
 loadKeys();
-if(currentProfile.role==="owner"){ loadAdmins(); }
+if(currentProfile.role==="owner") loadAdmins();
 }
 
+/* LOAD ADMINS */
 async function loadAdmins(){
 
 let { data:admins } = await client.from("profiles")
@@ -244,31 +262,42 @@ let blocked=keys?keys.filter(k=>k.status==="Blocked").length:0;
 
 adminList.innerHTML+=`
 <div class="admin-box">
-<div class="big-email">${admin.email}
+
+<div>
+${admin.email}
 <span class="balance">₹${admin.balance}</span>
 </div>
-Total Key: ${total}<br>
-Active Key: ${active}<br>
-Blocked Key: ${blocked}<br><br>
-<button class="block-btn" onclick="toggleAdmin('${admin.id}','blocked')">Block</button>
-<button class="owner-btn" onclick="toggleAdmin('${admin.id}','active')">Unblock</button>
+
+Total: ${total} | Active: ${active} | Blocked: ${blocked}
+
+<br><br>
+
+<button class="block-btn" onclick="toggleAdmin('${admin.id}','${admin.status}')">
+${admin.status==="blocked"?"Unblock":"Block"}
+</button>
+
 <button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete</button>
+
 </div>`;
 }
 }
 }
 
+/* TOGGLE ADMIN */
 async function toggleAdmin(id,status){
 
-await client.from("profiles").update({status:status}).eq("id",id);
+let newStatus = status==="blocked"?"active":"blocked";
 
-if(status==="blocked"){
+await client.from("profiles").update({status:newStatus}).eq("id",id);
+
+if(newStatus==="blocked"){
 await client.from("license_keys").update({status:"Blocked"}).eq("created_by",id);
 }
 
 loadAdmins();
 }
 
+/* DELETE ADMIN */
 async function deleteAdmin(adminId){
 
 if(!confirm("Delete Admin?")) return;
@@ -288,6 +317,7 @@ body:JSON.stringify({admin_id:adminId})
 loadAdmins();
 }
 
+/* ADD ADMIN */
 async function addAdmin(){
 
 let email=newAdminEmail.value;
@@ -296,6 +326,7 @@ let password=newAdminPassword.value;
 if(!email||!password){alert("Fill fields");return;}
 
 let { data:existing } = await client.from("profiles").select("*").eq("email",email);
+
 if(existing && existing.length>0){
 alert("Admin already exists");
 return;
