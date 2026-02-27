@@ -2,353 +2,326 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>LR CONTROL PANEL</title>
+<title>LR OWNER PANEL</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#0f0f1a;color:white;}
-header{padding:20px;text-align:center;font-size:32px;font-weight:bold;background:#111;color:#00ffff;position:relative;}
-.logout-top{
-position:absolute;right:20px;top:15px;
-background:red;color:white;
-padding:10px 18px;border:none;
-border-radius:8px;font-weight:bold;cursor:pointer;
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(135deg,#050510,#0f0f1f);
+color:white;
 }
-.container{padding:20px;max-width:1200px;margin:auto;}
-.card{background:#151528;padding:20px;border-radius:12px;margin-bottom:25px;box-shadow:0 0 25px #00f5ff22;}
-input,select{padding:10px;margin:6px 0;width:100%;border:none;border-radius:6px;background:#0d0d18;color:white;}
-button{padding:8px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
-.owner-btn{background:#00f5ff;color:black;}
-.danger-btn{background:red;color:white;}
-.block-btn{background:#888;color:black;}
-.status-active{color:#00ff9d;}
-.status-block{color:red;}
-.status-expired{color:#00aaff;}
+
+.glass{
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(15px);
+border:1px solid rgba(0,255,255,0.2);
+box-shadow:0 0 30px rgba(0,255,255,0.15);
+border-radius:18px;
+padding:25px;
+margin-bottom:30px;
+}
+
+.title{
+text-align:center;
+font-size:32px;
+font-weight:bold;
+color:#00ffff;
+text-shadow:0 0 15px #00ffff;
+margin-bottom:25px;
+}
+
+input,select{
+width:100%;
+padding:12px;
+margin:8px 0;
+background:transparent;
+border:none;
+border-bottom:2px solid #00ffff;
+color:white;
+outline:none;
+}
+
+button{
+padding:10px 18px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+margin:5px;
+}
+
+.btn-primary{background:#00ffff;color:black;}
+.btn-danger{background:red;color:white;}
+.btn-block{background:#888;color:black;}
+.btn-logout{background:red;color:white;float:right;}
+
 .hidden{display:none;}
-.section-title{font-size:20px;font-weight:bold;margin-bottom:15px;color:#00ffff;}
-.admin-box{background:#111122;border:1px solid #00ffff33;padding:15px;border-radius:12px;margin-top:20px;}
-.balance{float:right;color:#00ff9d;font-weight:bold;}
-table{width:100%;margin-top:10px;border-collapse:collapse;}
-th,td{padding:6px;text-align:center;border-bottom:1px solid #222;font-size:12px;}
+
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
+}
+
+th,td{
+padding:8px;
+text-align:center;
+border-bottom:1px solid rgba(255,255,255,0.1);
+font-size:13px;
+}
+
+.green{color:#00ff9d;}
+.red{color:red;}
+.blue{color:#00ccff;}
+
+.admin-box{
+margin-top:25px;
+padding:20px;
+border-radius:15px;
+background:rgba(0,0,0,0.4);
+border:1px solid rgba(0,255,255,0.3);
+}
+
+.balance{
+float:right;
+color:#00ff9d;
+font-weight:bold;
+}
+
+.center{ text-align:center; }
 </style>
 </head>
 
 <body>
 
-<header>
-LR OWNER PANEL
-<button id="logoutBtn" class="logout-top hidden" onclick="logout()">LOG OUT</button>
-</header>
+<div class="title">LR OWNER PANEL</div>
 
-<div class="container">
-
-<div class="card" id="loginSection">
-<input type="email" id="loginEmail" placeholder="Email">
-<input type="password" id="loginPassword" placeholder="Password">
-<button class="owner-btn" onclick="login()">Login</button>
+<div id="loginBox" class="glass" style="max-width:400px;margin:50px auto;">
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Password">
+<button class="btn-primary" onclick="login()">LOGIN</button>
 </div>
 
-<div id="mainPanel" class="hidden">
+<div id="panel" class="hidden" style="max-width:1200px;margin:auto;">
 
-<div class="card" id="generateSection">
-<div class="section-title">GENERATE KEY</div>
+<button class="btn-logout" onclick="logout()">LOG OUT</button>
+<div style="clear:both;"></div>
 
-<input type="text" id="username" placeholder="Username">
-<input type="text" id="manualKey" placeholder="Manual Key (Optional)">
-<input type="number" id="validity" placeholder="Validity Number">
+<div id="ownerSection"></div>
+<div id="adminSections"></div>
 
-<select id="validityType">
-<option value="days">Days</option>
-<option value="hours">Hours</option>
-</select>
-
-<button class="owner-btn" onclick="generateKey()">Generate Key</button>
-
-<table>
-<thead>
-<tr>
-<th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th>
-</tr>
-</thead>
-<tbody id="keyTable"></tbody>
-</table>
+<div id="addAdminBox" class="glass hidden center">
+<h3>Add New Admin</h3>
+<input type="email" id="newEmail" placeholder="Admin Email">
+<input type="password" id="newPassword" placeholder="Admin Password">
+<button class="btn-primary" onclick="addAdmin()">CREATE ADMIN</button>
 </div>
 
-<div id="adminSection" class="card hidden">
-<div class="section-title">ADMIN MANAGEMENT</div>
-<div id="adminList"></div>
-</div>
-
-<div id="addAdminBox" class="card hidden">
-<div class="section-title">ADD NEW ADMIN</div>
-<input type="email" id="newAdminEmail" placeholder="Admin Email">
-<input type="password" id="newAdminPassword" placeholder="Admin Password">
-<button class="owner-btn" onclick="addAdmin()">Create Admin</button>
-</div>
-
-</div>
 </div>
 
 <script>
 
-const client = supabase.createClient(
+const supabase = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6ImFub24i"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
+let userProfile;
 let currentUser;
-let currentProfile;
 
-/* SESSION PERSIST */
-client.auth.getSession().then(({data})=>{
-if(data.session){ initUser(); }
+supabase.auth.getSession().then(({data})=>{
+if(data.session) init();
 });
 
-/* LOGIN */
 async function login(){
-const { error } = await client.auth.signInWithPassword({
-email:loginEmail.value,
-password:loginPassword.value
+const {error}=await supabase.auth.signInWithPassword({
+email:email.value,
+password:password.value
 });
-if(error){ alert(error.message); return; }
-initUser();
+if(error){alert(error.message);return;}
+init();
 }
 
-/* INIT */
-async function initUser(){
-const { data:{user} } = await client.auth.getUser();
+async function init(){
+const {data:{user}}=await supabase.auth.getUser();
 currentUser=user;
 
-let { data } = await client.from("profiles").select("*").eq("id",user.id).single();
-currentProfile=data;
+const {data}=await supabase.from("profiles")
+.select("*").eq("id",user.id).single();
 
-if(!data || data.status==="blocked"){
-alert("Access Denied");
+userProfile=data;
+
+if(data.status==="blocked"){
+alert("Blocked");
 logout();
 return;
 }
 
-loginSection.classList.add("hidden");
-mainPanel.classList.remove("hidden");
-logoutBtn.classList.remove("hidden");
+loginBox.classList.add("hidden");
+panel.classList.remove("hidden");
 
-if(data.role==="owner"){
-adminSection.classList.remove("hidden");
-addAdminBox.classList.remove("hidden");
-loadAdmins();
+loadPanel();
 }
 
-loadKeys();
-}
-
-/* LOGOUT */
 async function logout(){
-await client.auth.signOut();
+await supabase.auth.signOut();
 location.reload();
 }
 
-/* RANDOM KEY */
 function randomKey(){
 return "LR-"+Math.floor(100000+Math.random()*900000);
 }
 
-/* GENERATE */
-async function generateKey(){
+async function loadPanel(){
 
-let user=username.value;
-let key=manualKey.value || randomKey();
-let value=parseInt(validity.value);
-let type=validityType.value;
+ownerSection.innerHTML="";
+adminSections.innerHTML="";
 
-if(!user||!value){ alert("Fill fields"); return; }
-
-let cost = type==="days"? value*100 : value*10;
-
-if(currentProfile.role==="admin"){
-if(currentProfile.balance < cost){
-let possible = Math.floor(currentProfile.balance/(type==="days"?100:10));
-alert("Insufficient Balance. You can create only "+possible+" "+type);
-return;
+if(userProfile.role==="owner"){
+addAdminBox.classList.remove("hidden");
+loadOwnerKeys();
+loadAdmins();
+}else{
+loadAdminOwn();
 }
-await client.from("profiles")
-.update({balance: currentProfile.balance - cost})
-.eq("id",currentUser.id);
-currentProfile.balance -= cost;
 }
 
-let expire=new Date();
-if(type==="days") expire.setDate(expire.getDate()+value);
-else expire.setHours(expire.getHours()+value);
+async function loadOwnerKeys(){
 
-await client.from("license_keys").insert([{
-username:user,
-license_key:key,
-expire_date:expire.toISOString(),
-status:"Active",
-created_by:currentUser.id
-}]);
+const {data}=await supabase.from("license_keys")
+.select("*").order("id",{ascending:false});
 
-loadKeys();
-if(currentProfile.role==="owner") loadAdmins();
-}
+let html=`<div class="glass"><h3>Owner Keys</h3>
+<table><tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th><th>Action</th></tr>`;
 
-/* LOAD KEYS */
-async function loadKeys(){
-let { data } = await client.from("license_keys")
-.select("*")
-.eq("created_by",currentUser.id)
-.order("id",{ascending:false});
-
-keyTable.innerHTML="";
-
-if(data){
 data.forEach(k=>{
-let expired = new Date(k.expire_date) < new Date();
-let statusText = expired? "Expired" : k.status;
-let statusClass = expired? "status-expired" : (k.status==="Active"?"status-active":"status-block");
-
-keyTable.innerHTML+=`
-<tr>
+let expired=new Date(k.expire_date)<new Date();
+let status=expired?"Expired":k.status;
+html+=`<tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
 <td>${expired?"Expired":new Date(k.expire_date).toLocaleString()}</td>
-<td class="${statusClass}">${statusText}</td>
+<td class="${expired?"blue":(k.status==="Active"?"green":"red")}">${status}</td>
 <td>
-<button class="block-btn" onclick="toggleKey(${k.id},'${k.status}')">
-${k.status==="Active"?"Block":"Unblock"}
-</button>
-<button class="danger-btn" onclick="deleteKey(${k.id})">Delete</button>
+<button class="btn-block" onclick="toggleKey(${k.id},'${k.status}')">Toggle</button>
+<button class="btn-danger" onclick="deleteKey(${k.id})">Delete</button>
 </td>
 </tr>`;
 });
-}
+
+html+="</table></div>";
+ownerSection.innerHTML=html;
 }
 
-/* TOGGLE KEY */
-async function toggleKey(id,status){
-let newStatus=status==="Active"?"Blocked":"Active";
-await client.from("license_keys").update({status:newStatus}).eq("id",id);
-loadKeys();
-if(currentProfile.role==="owner") loadAdmins();
-}
-
-/* DELETE KEY */
-async function deleteKey(id){
-if(!confirm("Delete?")) return;
-await client.from("license_keys").delete().eq("id",id);
-loadKeys();
-if(currentProfile.role==="owner") loadAdmins();
-}
-
-/* LOAD ADMINS */
 async function loadAdmins(){
 
-let { data:admins } = await client.from("profiles")
-.select("*")
-.eq("role","admin");
+const {data}=await supabase.from("profiles")
+.select("*").eq("role","admin");
 
-adminList.innerHTML="";
+for(let admin of data){
 
-if(admins){
-for(let admin of admins){
+const {data:keys}=await supabase.from("license_keys")
+.select("*").eq("created_by",admin.id);
 
-let { data:keys } = await client.from("license_keys")
-.select("*")
-.eq("created_by",admin.id);
+let total=keys.length;
+let active=keys.filter(k=>k.status==="Active").length;
+let blocked=keys.filter(k=>k.status==="Blocked").length;
 
-let total=keys?keys.length:0;
-let active=keys?keys.filter(k=>k.status==="Active").length:0;
-let blocked=keys?keys.filter(k=>k.status==="Blocked").length:0;
-
-adminList.innerHTML+=`
-<div class="admin-box">
-
-<div>
-${admin.email}
-<span class="balance">₹${admin.balance}</span>
-</div>
-
-Total: ${total} | Active: ${active} | Blocked: ${blocked}
-
-<br><br>
-
-<button class="block-btn" onclick="toggleAdmin('${admin.id}','${admin.status}')">
+let box=`<div class="admin-box">
+<b>${admin.email}</b>
+<span class="balance">₹${admin.balance}</span><br>
+Total:${total} | Active:${active} | Blocked:${blocked}<br><br>
+<button class="btn-block" onclick="toggleAdmin('${admin.id}','${admin.status}')">
 ${admin.status==="blocked"?"Unblock":"Block"}
 </button>
-
-<button class="danger-btn" onclick="deleteAdmin('${admin.id}')">Delete</button>
-
+<button class="btn-danger" onclick="deleteAdmin('${admin.id}')">Delete</button>
 </div>`;
-}
+
+adminSections.innerHTML+=box;
 }
 }
 
-/* TOGGLE ADMIN */
+async function loadAdminOwn(){
+
+const {data}=await supabase.from("license_keys")
+.select("*").eq("created_by",currentUser.id);
+
+let html=`<div class="glass"><h3>Your Keys</h3>
+<table><tr><th>User</th><th>Key</th><th>Expire</th><th>Status</th></tr>`;
+
+data.forEach(k=>{
+html+=`<tr>
+<td>${k.username}</td>
+<td>${k.license_key}</td>
+<td>${new Date(k.expire_date).toLocaleString()}</td>
+<td>${k.status}</td>
+</tr>`;
+});
+
+html+="</table></div>";
+adminSections.innerHTML=html;
+}
+
+async function toggleKey(id,status){
+let newStatus=status==="Active"?"Blocked":"Active";
+await supabase.from("license_keys").update({status:newStatus}).eq("id",id);
+loadPanel();
+}
+
+async function deleteKey(id){
+await supabase.from("license_keys").delete().eq("id",id);
+loadPanel();
+}
+
 async function toggleAdmin(id,status){
-
-let newStatus = status==="blocked"?"active":"blocked";
-
-await client.from("profiles").update({status:newStatus}).eq("id",id);
-
+let newStatus=status==="blocked"?"active":"blocked";
+await supabase.from("profiles").update({status:newStatus}).eq("id",id);
 if(newStatus==="blocked"){
-await client.from("license_keys").update({status:"Blocked"}).eq("created_by",id);
+await supabase.from("license_keys")
+.update({status:"Blocked"}).eq("created_by",id);
+}
+loadPanel();
 }
 
-loadAdmins();
-}
-
-/* DELETE ADMIN */
 async function deleteAdmin(adminId){
-
-if(!confirm("Delete Admin?")) return;
-
-const { data: sessionData } = await client.auth.getSession();
-const token = sessionData.session.access_token;
-
+const {data:session}=await supabase.auth.getSession();
 await fetch("https://dpskhodrzlnqczibolug.supabase.co/functions/v1/delete-admin",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
-"Authorization":"Bearer "+token
+"Authorization":"Bearer "+session.session.access_token
 },
 body:JSON.stringify({admin_id:adminId})
 });
-
-loadAdmins();
+loadPanel();
 }
 
-/* ADD ADMIN */
 async function addAdmin(){
 
-let email=newAdminEmail.value;
-let password=newAdminPassword.value;
+const {data:exist}=await supabase.from("profiles")
+.select("*").eq("email",newEmail.value);
 
-if(!email||!password){alert("Fill fields");return;}
+if(exist.length>0){alert("Admin already exists");return;}
 
-let { data:existing } = await client.from("profiles").select("*").eq("email",email);
+const {data,error}=await supabase.auth.signUp({
+email:newEmail.value,
+password:newPassword.value
+});
 
-if(existing && existing.length>0){
-alert("Admin already exists");
-return;
-}
+if(error){alert(error.message);return;}
 
-const { data, error } = await client.auth.signUp({email,password});
-if(error){ alert(error.message); return; }
-
-await client.from("profiles").insert([{
+await supabase.from("profiles").insert([{
 id:data.user.id,
-email:email,
+email:newEmail.value,
 role:"admin",
 balance:1000,
 status:"active"
 }]);
 
-alert("Admin Created");
-
-newAdminEmail.value="";
-newAdminPassword.value="";
-
-loadAdmins();
+alert("Admin Added");
+loadPanel();
 }
 
 </script>
