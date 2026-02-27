@@ -4,18 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LR OWNER PANEL</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
 
 body{
+background:linear-gradient(135deg,#071226,#0f1f3d);
+color:#e0f7ff;
+min-height:100vh;
+}
+
+.hidden{display:none}
+
+/* LOGIN */
+
+.center{
 height:100vh;
 display:flex;
 align-items:center;
 justify-content:center;
-background:linear-gradient(135deg,#071226,#0f1f3d);
-color:white;
 }
 
 .glass{
@@ -28,9 +37,9 @@ box-shadow:0 0 40px rgba(0,255,255,0.3);
 text-align:center;
 }
 
-h2{
-margin-bottom:30px;
-color:#4ffcff;
+.glass h2{
+margin-bottom:25px;
+color:#00f7ff;
 }
 
 .input-group{
@@ -49,38 +58,99 @@ outline:none;
 }
 
 .input-group input:focus{
-border-bottom:2px solid #4ffcff;
+border-bottom:2px solid #00f7ff;
 }
 
-button{
-width:100%;
-padding:12px;
-border-radius:30px;
+.btn{
+padding:10px 18px;
 border:none;
+border-radius:25px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.btn-primary{
 background:linear-gradient(90deg,#00eaff,#0088ff);
 color:white;
-font-weight:bold;
-cursor:pointer;
 box-shadow:0 0 15px cyan;
-transition:0.3s;
 }
 
-button:hover{
-transform:scale(1.05);
+.btn-danger{
+background:red;
+color:white;
+}
+
+.btn-warning{
+background:#555;
+color:white;
 }
 
 #error{
-margin-top:15px;
+margin-top:10px;
 color:#ff6b6b;
-font-size:14px;
 }
-.hidden{display:none}
+
+/* PANEL */
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px;
+font-size:22px;
+color:#00f7ff;
+}
+
+.section{
+margin:20px;
+padding:20px;
+border-radius:20px;
+background:rgba(255,255,255,0.05);
+box-shadow:0 0 25px rgba(0,255,255,0.1);
+}
+
+.section h3{
+margin-bottom:15px;
+color:#00f7ff;
+}
+
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
+}
+
+th,td{
+padding:8px;
+border-bottom:1px solid rgba(255,255,255,0.1);
+text-align:left;
+}
+
+.status-active{color:#00ff99}
+.status-blocked{color:red}
+
+.admin-box{
+margin:20px auto;
+width:320px;
+padding:30px;
+border-radius:20px;
+background:rgba(255,255,255,0.05);
+box-shadow:0 0 25px rgba(0,255,255,0.3);
+text-align:center;
+}
+
+.admin-box h3{
+margin-bottom:20px;
+color:#00f7ff;
+}
 </style>
 </head>
 
 <body>
 
-<div class="glass" id="loginBox">
+<!-- LOGIN -->
+<div id="loginPage" class="center">
+<div class="glass">
 <h2>LR OWNER PANEL</h2>
 
 <div class="input-group">
@@ -91,67 +161,240 @@ font-size:14px;
 <input type="password" id="password" placeholder="Password">
 </div>
 
-<button id="loginBtn">LOGIN</button>
-
+<button class="btn btn-primary" onclick="login()">LOGIN</button>
 <div id="error"></div>
+</div>
+</div>
+
+<!-- PANEL -->
+<div id="panelPage" class="hidden">
+
+<div class="header">
+<span id="panelTitle"></span>
+<button class="btn btn-danger" onclick="logout()">LOG OUT</button>
+</div>
+
+<div id="ownerPanel" class="hidden">
+
+<div class="section">
+<h3>OWNER KEYS</h3>
+
+<input id="o_user" placeholder="User">
+<input id="o_days" type="number" placeholder="Days" value="1">
+<button class="btn btn-primary" onclick="generateKey(true)">Generate</button>
+
+<div id="ownerKeys"></div>
+</div>
+
+<div class="section">
+<h3>ADMIN SECTIONS</h3>
+<div id="adminSections"></div>
+</div>
+
+<div class="admin-box">
+<h3>ADD NEW ADMIN</h3>
+<div class="input-group">
+<input id="newEmail" placeholder="Admin Email">
+</div>
+<div class="input-group">
+<input id="newPass" placeholder="Password">
+</div>
+<button class="btn btn-primary" onclick="addAdmin()">ADD NEW ADMIN</button>
+</div>
+
+</div>
+
+<div id="adminPanel" class="hidden">
+
+<div class="section">
+<h3>ADMIN PANEL</h3>
+
+<div id="adminInfo"></div>
+
+<input id="a_user" placeholder="User">
+<input id="a_days" type="number" value="1">
+<button class="btn btn-primary" onclick="generateKey(false)">Generate</button>
+
+<div id="adminKeys"></div>
+
+</div>
+
+</div>
+
 </div>
 
 <script>
 
 const supabase = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
+"YOUR_PUBLIC_ANON_KEY"
 );
 
-const loginBtn = document.getElementById("loginBtn");
-const errorBox = document.getElementById("error");
-
-loginBtn.addEventListener("click", login);
-
-/* ---------- Auto Session Check ---------- */
-
-window.addEventListener("DOMContentLoaded", async () => {
-const { data } = await supabase.auth.getSession();
-if(data.session){
-alert("Already Logged In");
-}
-});
-
-/* ---------- Login Function ---------- */
+let currentUser=null;
 
 async function login(){
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value;
+const errorBox=document.getElementById("error");
+errorBox.textContent="";
 
-const emailVal = document.getElementById("email").value.trim();
-const passVal = document.getElementById("password").value;
-
-errorBox.textContent = "";
-
-if(!emailVal || !passVal){
-errorBox.textContent = "Email / Password required";
+if(!email||!password){
+errorBox.textContent="Email / Password required";
 return;
 }
 
-loginBtn.innerText = "Logging...";
-loginBtn.disabled = true;
+const {error}=await supabase.auth.signInWithPassword({email,password});
+if(error){
+errorBox.textContent=error.message;
+return;
+}
 
-const { error } = await supabase.auth.signInWithPassword({
-email: emailVal,
-password: passVal
+loadUser();
+}
+
+async function loadUser(){
+const {data:{user}}=await supabase.auth.getUser();
+if(!user)return;
+
+const {data}=await supabase.from("profiles").select("*").eq("id",user.id).single();
+if(!data)return;
+
+currentUser=data;
+
+loginPage.classList.add("hidden");
+panelPage.classList.remove("hidden");
+panelTitle.innerText=data.role.toUpperCase()+" PANEL";
+
+if(data.role==="owner"){
+ownerPanel.classList.remove("hidden");
+loadOwner();
+}else{
+adminPanel.classList.remove("hidden");
+loadAdmin();
+}
+}
+
+async function logout(){
+await supabase.auth.signOut();
+location.reload();
+}
+
+function randomKey(){
+return "LR-"+Math.random().toString(36).substring(2,8).toUpperCase();
+}
+
+async function generateKey(isOwner){
+let username=isOwner?o_user.value:a_user.value;
+let days=Number(isOwner?o_days.value:a_days.value);
+if(!username||!days)return;
+
+let exp=new Date();
+exp.setDate(exp.getDate()+days);
+
+await supabase.from("license_keys").insert({
+username,
+license_key:randomKey(),
+expire_date:exp,
+status:"Active",
+created_by:currentUser.id,
+key_type:"days"
 });
 
-if(error){
-errorBox.textContent = error.message;
-loginBtn.innerText = "LOGIN";
-loginBtn.disabled = false;
-return;
+location.reload();
 }
 
-alert("Login Successful");
+async function loadOwner(){
+loadKeys();
 
-loginBtn.innerText = "LOGIN";
-loginBtn.disabled = false;
+const {data:admins}=await supabase.from("profiles").select("*").eq("role","admin");
 
+adminSections.innerHTML="";
+
+for(let admin of admins){
+
+const {data:keys}=await supabase.from("license_keys")
+.select("*").eq("created_by",admin.id);
+
+let html=`
+<div class="section">
+<h3>${admin.email} | Balance ₹${admin.balance}</h3>
+<table>
+<tr><th>User</th><th>Key</th><th>Status</th></tr>
+`;
+
+keys.forEach(k=>{
+html+=`
+<tr>
+<td>${k.username}</td>
+<td>${k.license_key}</td>
+<td class="${k.status==='Active'?'status-active':'status-blocked'}">${k.status}</td>
+</tr>`;
+});
+
+html+=`</table>
+<button class="btn btn-warning" onclick="blockAdmin('${admin.id}')">Block Admin</button>
+<button class="btn btn-danger" onclick="deleteAdmin('${admin.id}')">Delete Admin</button>
+</div>`;
+
+adminSections.innerHTML+=html;
 }
+}
+
+async function loadAdmin(){
+adminInfo.innerHTML=`Balance ₹${currentUser.balance}`;
+loadKeys();
+}
+
+async function loadKeys(){
+const {data}=await supabase.from("license_keys")
+.select("*").eq("created_by",currentUser.id);
+
+let box=currentUser.role==="owner"?ownerKeys:adminKeys;
+
+let html="<table><tr><th>User</th><th>Key</th><th>Status</th></tr>";
+data.forEach(k=>{
+html+=`<tr>
+<td>${k.username}</td>
+<td>${k.license_key}</td>
+<td class="${k.status==='Active'?'status-active':'status-blocked'}">${k.status}</td>
+</tr>`;
+});
+html+="</table>";
+
+box.innerHTML=html;
+}
+
+async function blockAdmin(id){
+await supabase.from("profiles").update({is_blocked:true}).eq("id",id);
+await supabase.from("license_keys").update({status:"Blocked"}).eq("created_by",id);
+location.reload();
+}
+
+async function deleteAdmin(id){
+await supabase.from("profiles").delete().eq("id",id);
+location.reload();
+}
+
+async function addAdmin(){
+const email=newEmail.value;
+const password=newPass.value;
+
+const {data,error}=await supabase.auth.signUp({email,password});
+if(error)return alert(error.message);
+
+await supabase.from("profiles").insert({
+id:data.user.id,
+email,
+role:"admin",
+balance:1000,
+status:"active",
+is_blocked:false
+});
+
+location.reload();
+}
+
+loadUser();
 
 </script>
 
