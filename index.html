@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,273 +8,104 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
-
 body{
+margin:0;
+font-family:Arial;
 background:linear-gradient(135deg,#071226,#0f1f3d);
-color:#e0f7ff;
-min-height:100vh;
+color:white;
 }
-
-.hidden{display:none}
 
 .center{
 height:100vh;
 display:flex;
-align-items:center;
 justify-content:center;
+align-items:center;
 }
 
-.glass{
-width:350px;
-padding:40px 30px;
-border-radius:25px;
+.box{
 background:rgba(255,255,255,0.05);
-backdrop-filter:blur(15px);
-box-shadow:0 0 40px rgba(0,255,255,0.3);
+padding:40px;
+border-radius:20px;
+box-shadow:0 0 30px rgba(0,255,255,0.4);
+width:320px;
 text-align:center;
 }
 
-.glass h2{
-margin-bottom:25px;
-color:#00f7ff;
-}
-
-.input-group{
-margin-bottom:20px;
-text-align:left;
-}
-
-.input-group input{
+input{
 width:100%;
-padding:12px;
+padding:10px;
+margin:10px 0;
 background:transparent;
 border:none;
-border-bottom:2px solid rgba(255,255,255,0.3);
+border-bottom:2px solid rgba(255,255,255,0.4);
 color:white;
-outline:none;
 }
 
-.input-group input:focus{
-border-bottom:2px solid #00f7ff;
-}
-
-.btn{
-padding:10px 18px;
+button{
+padding:10px 20px;
 border:none;
-border-radius:25px;
-cursor:pointer;
-font-weight:bold;
-}
-
-.btn-primary{
+border-radius:20px;
 background:linear-gradient(90deg,#00eaff,#0088ff);
 color:white;
-box-shadow:0 0 15px cyan;
+cursor:pointer;
+box-shadow:0 0 10px cyan;
 }
 
-.btn-danger{
-background:red;
-color:white;
+#error{
+color:red;
+margin-top:10px;
 }
-
-.header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:20px;
-font-size:22px;
-color:#00f7ff;
-}
-
-.section{
-margin:20px;
-padding:20px;
-border-radius:20px;
-background:rgba(255,255,255,0.05);
-box-shadow:0 0 25px rgba(0,255,255,0.1);
-}
-
-table{
-width:100%;
-margin-top:15px;
-border-collapse:collapse;
-}
-
-th,td{
-padding:8px;
-border-bottom:1px solid rgba(255,255,255,0.1);
-text-align:left;
-}
-
-.status-active{color:#00ff99}
-.status-blocked{color:red}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginPage" class="center">
-<div class="glass">
-<h2>LR OWNER PANEL</h2>
+<div class="box">
+<h2 style="color:#00f7ff;">LR OWNER PANEL</h2>
 
-<div class="input-group">
 <input type="email" id="email" placeholder="Email">
-</div>
-
-<div class="input-group">
 <input type="password" id="password" placeholder="Password">
+<button onclick="login()">LOGIN</button>
+
+<div id="error"></div>
 </div>
-
-<button class="btn btn-primary" onclick="login()">LOGIN</button>
-<div id="error" style="margin-top:10px;color:#ff6b6b;"></div>
-</div>
-</div>
-
-<!-- PANEL -->
-<div id="panelPage" class="hidden">
-
-<div class="header">
-<span id="panelTitle"></span>
-<button class="btn btn-danger" onclick="logout()">LOG OUT</button>
-</div>
-
-<div id="contentArea"></div>
-
 </div>
 
 <script>
 
-const supabase = window.supabase.createClient(
+const { createClient } = supabase;
+
+const client = createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
-let currentUser=null;
-
 async function login(){
+
 const email=document.getElementById("email").value.trim();
 const password=document.getElementById("password").value;
 const errorBox=document.getElementById("error");
-
 errorBox.textContent="";
 
-if(!email||!password){
-errorBox.textContent="Email / Password required";
+if(!email || !password){
+errorBox.textContent="Email and Password required";
 return;
 }
 
-const {error}=await supabase.auth.signInWithPassword({email,password});
+const { error } = await client.auth.signInWithPassword({
+email: email,
+password: password
+});
+
 if(error){
 errorBox.textContent=error.message;
 return;
 }
 
-loadUser();
-}
-
-async function loadUser(){
-const {data:{user}}=await supabase.auth.getUser();
-if(!user)return;
-
-const {data}=await supabase.from("profiles").select("*").eq("id",user.id).single();
-if(!data)return;
-
-currentUser=data;
-
-document.getElementById("loginPage").classList.add("hidden");
-document.getElementById("panelPage").classList.remove("hidden");
-document.getElementById("panelTitle").innerText=data.role.toUpperCase()+" PANEL";
-
-if(data.role==="owner") loadOwner();
-else loadAdmin();
-}
-
-async function logout(){
-await supabase.auth.signOut();
+alert("Login Success ✅");
 location.reload();
 }
-
-function randomKey(){
-return "LR-"+Math.random().toString(36).substring(2,8).toUpperCase();
-}
-
-async function generateKey(){
-const username=document.getElementById("genUser").value;
-const days=Number(document.getElementById("genDays").value);
-
-if(!username||!days)return;
-
-let exp=new Date();
-exp.setDate(exp.getDate()+days);
-
-await supabase.from("license_keys").insert({
-username,
-license_key:randomKey(),
-expire_date:exp,
-status:"Active",
-created_by:currentUser.id,
-key_type:"days"
-});
-
-location.reload();
-}
-
-async function loadOwner(){
-
-let html=`
-<div class="section">
-<h3>OWNER KEYS</h3>
-<input id="genUser" placeholder="User">
-<input id="genDays" type="number" value="1">
-<button class="btn btn-primary" onclick="generateKey()">Generate</button>
-<div id="ownerKeys"></div>
-</div>
-`;
-
-document.getElementById("contentArea").innerHTML=html;
-
-loadKeys();
-}
-
-async function loadAdmin(){
-
-let html=`
-<div class="section">
-<h3>ADMIN PANEL</h3>
-<input id="genUser" placeholder="User">
-<input id="genDays" type="number" value="1">
-<button class="btn btn-primary" onclick="generateKey()">Generate</button>
-<div id="ownerKeys"></div>
-</div>
-`;
-
-document.getElementById("contentArea").innerHTML=html;
-
-loadKeys();
-}
-
-async function loadKeys(){
-const {data}=await supabase.from("license_keys")
-.select("*").eq("created_by",currentUser.id);
-
-let html="<table><tr><th>User</th><th>Key</th><th>Status</th></tr>";
-
-data.forEach(k=>{
-html+=`<tr>
-<td>${k.username}</td>
-<td>${k.license_key}</td>
-<td class="${k.status==='Active'?'status-active':'status-blocked'}">${k.status}</td>
-</tr>`;
-});
-
-html+="</table>";
-
-document.getElementById("ownerKeys").innerHTML=html;
-}
-
-loadUser();
 
 </script>
 
