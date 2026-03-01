@@ -2,27 +2,137 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>LR OWNER PANEL</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:linear-gradient(135deg,#050510,#0f0f1f);color:white;}
-.title{text-align:center;font-size:30px;font-weight:bold;color:#00ffff;text-shadow:0 0 15px #00ffff;margin:25px 0;}
-.glass{background:rgba(255,255,255,0.05);backdrop-filter:blur(15px);
-border:1px solid rgba(0,255,255,0.2);box-shadow:0 0 30px rgba(0,255,255,0.15);
-border-radius:18px;padding:20px;margin-bottom:20px;}
-input,select{width:100%;padding:10px;margin:6px 0;background:transparent;
-border:none;border-bottom:2px solid #00ffff;color:white;outline:none;}
-button{padding:6px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;margin:4px;}
-.btn-primary{background:#00ffff;color:black;}
-.btn-danger{background:red;color:white;}
-.btn-block{background:#888;color:black;}
-.btn-logout{background:red;color:white;float:right;}
+
+/* ===== BODY ===== */
+body{
+margin:0;
+font-family:Arial, sans-serif;
+color:white;
+overflow-x:hidden;
+background:#0a0005;
+}
+
+/* ===== LIVE RED BACKGROUND ===== */
+body::before{
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:200%;
+height:200%;
+background:
+radial-gradient(circle at 20% 30%, rgba(255,0,0,0.25) 0%, transparent 40%),
+radial-gradient(circle at 80% 70%, rgba(255,0,0,0.2) 0%, transparent 40%),
+radial-gradient(circle at 50% 50%, rgba(255,0,0,0.15) 0%, transparent 60%);
+animation:moveBg 45s linear infinite;
+z-index:-1;
+}
+
+@keyframes moveBg{
+0%{transform:translate(0,0);}
+50%{transform:translate(-10%,-10%);}
+100%{transform:translate(0,0);}
+}
+
+/* ===== TITLE ===== */
+.title{
+text-align:center;
+font-size:28px;
+font-weight:bold;
+color:#ff2a2a;
+text-shadow:0 0 20px red;
+margin:20px 0;
+}
+
+/* ===== GLASS CARD ===== */
+.glass{
+background:rgba(255,0,0,0.05);
+backdrop-filter:blur(15px);
+border:1px solid rgba(255,0,0,0.3);
+box-shadow:0 0 30px rgba(255,0,0,0.25);
+border-radius:20px;
+padding:20px;
+margin-bottom:20px;
+}
+
+/* ===== INPUTS ===== */
+input,select{
+width:100%;
+padding:12px;
+margin:8px 0;
+background:transparent;
+border:none;
+border-bottom:2px solid red;
+color:white;
+outline:none;
+font-size:14px;
+}
+
+/* ===== BUTTONS ===== */
+button{
+padding:8px 14px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+margin:4px;
+}
+
+.btn-primary{
+background:red;
+color:white;
+box-shadow:0 0 15px red;
+}
+
+.btn-danger{
+background:#ff0033;
+color:white;
+}
+
+.btn-block{
+background:#999;
+color:black;
+}
+
+.btn-logout{
+background:#ff0033;
+color:white;
+float:right;
+padding:8px 18px;
+}
+
+/* ===== TABLE ===== */
+table{
+width:100%;
+margin-top:10px;
+border-collapse:collapse;
+}
+
+th{
+padding:8px;
+color:#ff4444;
+border-bottom:1px solid rgba(255,0,0,0.3);
+font-size:13px;
+}
+
+td{
+padding:8px;
+border-bottom:1px solid rgba(255,255,255,0.1);
+font-size:12px;
+}
+
+.green{color:#00ff9d;}
+.red{color:red;}
+.blue{color:#00ccff;}
+
 .hidden{display:none;}
-table{width:100%;margin-top:10px;border-collapse:collapse;}
-th,td{padding:6px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);font-size:13px;}
-.green{color:#00ff9d;} .red{color:red;} .blue{color:#00ccff;}
 .clear{clear:both;}
+
 </style>
 </head>
 
@@ -33,10 +143,10 @@ th,td{padding:6px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1
 <div id="loginBox" class="glass" style="max-width:400px;margin:60px auto;">
 <input type="email" id="loginEmail" placeholder="Owner Email">
 <input type="password" id="loginPassword" placeholder="Password">
-<button id="loginBtn" class="btn-primary">LOGIN</button>
+<button id="loginBtn" class="btn-primary" style="width:100%;">LOGIN</button>
 </div>
 
-<div id="panel" class="hidden" style="max-width:1100px;margin:auto;">
+<div id="panel" class="hidden" style="max-width:1100px;margin:auto;padding:15px;">
 <button class="btn-logout" onclick="logout()">LOG OUT</button>
 <div class="clear"></div>
 <div id="content"></div>
@@ -52,7 +162,6 @@ const supabaseClient = window.supabase.createClient(
 let currentUser=null;
 let profile=null;
 
-/* LOGIN */
 document.getElementById("loginBtn").addEventListener("click", async ()=>{
 const email=loginEmail.value.trim();
 const password=loginPassword.value.trim();
@@ -64,12 +173,10 @@ if(error){alert(error.message);return;}
 loadSession();
 });
 
-/* AUTO SESSION */
 supabaseClient.auth.getSession().then(({data})=>{
 if(data.session) loadSession();
 });
 
-/* LOAD SESSION */
 async function loadSession(){
 
 const {data:{user}}=await supabaseClient.auth.getUser();
@@ -92,7 +199,6 @@ panel.classList.remove("hidden");
 renderPanel();
 }
 
-/* LOGOUT */
 async function logout(){
 await supabaseClient.auth.signOut();
 location.reload();
@@ -100,12 +206,10 @@ location.reload();
 
 function isExpired(d){return new Date(d)<new Date();}
 
-/* MAIN RENDER */
 async function renderPanel(){
 
 let html="";
 
-/* GENERATE SECTION */
 html+=`
 <div class="glass">
 <h3>Generate Key</h3>
@@ -120,7 +224,6 @@ html+=`
 <button class="btn-primary" onclick="generateKey()">Generate</button>
 </div>`;
 
-/* LOAD KEYS */
 const {data:keys}=await supabaseClient
 .from("license_keys")
 .select("*")
@@ -164,7 +267,6 @@ html+="</table></div>";
 content.innerHTML=html;
 }
 
-/* GENERATE KEY */
 async function generateKey(){
 
 const u=username.value.trim();
@@ -194,7 +296,6 @@ used_devices:0
 renderPanel();
 }
 
-/* BLOCK / UNBLOCK */
 async function toggleKey(id,status){
 
 const {data}=await supabaseClient.from("license_keys")
@@ -212,7 +313,6 @@ await supabaseClient.from("license_keys")
 renderPanel();
 }
 
-/* DELETE */
 async function deleteKey(id){
 if(!confirm("Delete?"))return;
 await supabaseClient.from("license_keys").delete().eq("id",id);
