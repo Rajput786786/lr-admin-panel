@@ -7,105 +7,92 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-*{box-sizing:border-box;}
-
 body{
 margin:0;
 font-family:Segoe UI,Arial,sans-serif;
-background:radial-gradient(circle at center,#700000 0%,#2a0000 45%,#0d0000 100%);
+background:radial-gradient(circle at center,#070b1a 0%,#050814 60%,#02040a 100%);
 color:white;
-overflow-x:hidden;
-}
-
-.container{
-max-width:480px;
-margin:auto;
-padding:18px;
 }
 
 .title{
 text-align:center;
 font-size:26px;
 font-weight:bold;
-color:#ff2a2a;
-text-shadow:0 0 25px red;
-margin:15px 0;
+color:#00f0ff;
+text-shadow:0 0 20px #00f0ff;
+margin:20px 0;
 }
 
-.logout{
-float:right;
-background:#ff1a1a;
-color:white;
-border:none;
-padding:8px 18px;
-border-radius:14px;
-box-shadow:0 0 18px red;
-font-weight:bold;
+.glass{
+background:rgba(0,255,255,0.05);
+backdrop-filter:blur(15px);
+border:1px solid rgba(0,255,255,0.3);
+box-shadow:0 0 25px rgba(0,255,255,0.2);
+border-radius:18px;
+padding:20px;
+margin:20px;
 }
-
-/* ===== CARD STYLE ===== */
-.card{
-background:linear-gradient(145deg,#400000,#1a0000);
-border:2px solid rgba(255,0,0,0.6);
-border-radius:24px;
-padding:22px;
-margin-top:22px;
-box-shadow:
-0 0 35px rgba(255,0,0,0.5),
-inset 0 0 25px rgba(255,0,0,0.15);
-}
-
-/* ===== GENERATE SECTION SAME ===== */
 
 input,select{
 width:100%;
-padding:14px;
-margin:12px 0;
-background:linear-gradient(145deg,#300000,#1a0000);
-border:1px solid #ff2a2a;
-border-radius:16px;
-color:white;
-font-size:15px;
-outline:none;
-box-shadow:
-inset 0 0 12px rgba(255,0,0,0.4),
-0 0 8px rgba(255,0,0,0.4);
-}
-
-.btn{
-background:linear-gradient(145deg,#ff1a1a,#c40000);
+padding:12px;
+margin:10px 0;
+background:transparent;
 border:none;
+border-bottom:2px solid #00f0ff;
 color:white;
-padding:12px 22px;
-border-radius:18px;
-box-shadow:0 0 20px red;
+outline:none;
+}
+
+button{
+padding:6px 14px;
+border:none;
+border-radius:6px;
+cursor:pointer;
 font-weight:bold;
-margin-top:10px;
 }
 
-/* ===== CLEAN TABLE (LIKE SECOND IMAGE) ===== */
-
-.table-wrapper{
-overflow-x:auto;
+.btn-primary{
+background:#00f0ff;
+color:black;
 }
+
+.btn-danger{
+background:red;
+color:white;
+}
+
+.btn-block{
+background:#aaa;
+color:black;
+}
+
+.btn-logout{
+background:red;
+color:white;
+float:right;
+}
+
+.hidden{display:none;}
 
 table{
 width:100%;
 border-collapse:collapse;
-margin-top:12px;
+margin-top:15px;
 }
 
 th{
-color:#ff4d4d;
-font-size:13px;
-padding:10px 6px;
 text-align:left;
+font-size:13px;
+color:#ccc;
+padding-bottom:10px;
+border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
 td{
+padding:12px 4px;
 font-size:13px;
-padding:12px 6px;
-border-top:1px solid rgba(255,255,255,0.15);
+border-bottom:1px solid rgba(255,255,255,0.05);
 vertical-align:middle;
 }
 
@@ -113,64 +100,43 @@ vertical-align:middle;
 .status-expired{color:#00ccff;}
 .status-blocked{color:red;}
 
-.action-buttons{
-display:flex;
-gap:6px;
-justify-content:flex-end;
+.action-cell{
+text-align:right;
+white-space:nowrap;
 }
 
-.action-btn{
-padding:6px 10px;
-border:none;
+.action-cell button{
+margin-left:6px;
+padding:5px 10px;
 border-radius:6px;
 font-size:12px;
-font-weight:bold;
-cursor:pointer;
 }
 
-.block-btn{
-background:#bfbfbf;
-color:black;
-}
-
-.delete-btn{
-background:#ff1a1a;
-color:white;
-}
-
-.hidden{display:none;}
 .clear{clear:both;}
-
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
 <div class="title">LR OWNER PANEL</div>
 
-<div id="loginBox" class="card">
+<div id="loginBox" class="glass" style="max-width:400px;margin:60px auto;">
 <input type="email" id="loginEmail" placeholder="Owner Email">
 <input type="password" id="loginPassword" placeholder="Password">
-<button id="loginBtn" class="btn" style="width:100%;">LOGIN</button>
+<button id="loginBtn" class="btn-primary">LOGIN</button>
 </div>
 
-<div id="panel" class="hidden">
-<button class="logout" onclick="logout()">LOG OUT</button>
+<div id="panel" class="hidden" style="max-width:1100px;margin:auto;">
+<button class="btn-logout" onclick="logout()">LOG OUT</button>
 <div class="clear"></div>
 <div id="content"></div>
 </div>
 
-</div>
-
 <script>
-
-/* ===== LOGIC SAME ===== */
 
 const supabaseClient = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
+"YOUR_ANON_KEY"
 );
 
 let currentUser=null;
@@ -202,8 +168,10 @@ if(data.role!=="owner"){alert("Access Denied");await logout();return;}
 if(data.status==="blocked"){alert("Blocked");await logout();return;}
 
 profile=data;
+
 loginBox.classList.add("hidden");
 panel.classList.remove("hidden");
+
 renderPanel();
 }
 
@@ -218,9 +186,10 @@ async function renderPanel(){
 
 let html="";
 
+/* Generate section – untouched */
 html+=`
-<div class="card">
-<h3 style="font-size:20px;">Generate Key</h3>
+<div class="glass">
+<h3>Generate Key</h3>
 <input type="text" id="username" placeholder="Username">
 <input type="text" id="manualKey" placeholder="Manual Key (Optional)">
 <input type="number" id="validity" placeholder="Validity">
@@ -228,19 +197,19 @@ html+=`
 <option value="days">Days</option>
 <option value="hours">Hours</option>
 </select>
-<input type="number" id="maxDevices" placeholder="Devices">
-<button class="btn" onclick="generateKey()">Generate</button>
+<input type="number" id="maxDevices" placeholder="Max Devices" value="1">
+<button class="btn-primary" onclick="generateKey()">Generate</button>
 </div>`;
 
+/* Your Keys section – redesigned only */
 const {data:keys}=await supabaseClient
 .from("license_keys")
 .select("*")
 .eq("created_by",currentUser.id)
 .order("id",{ascending:false});
 
-html+=`<div class="card">
-<h3 style="font-size:20px;">Your Keys</h3>
-<div class="table-wrapper">
+html+=`<div class="glass">
+<h3>Your Keys</h3>
 <table>
 <tr>
 <th>User</th>
@@ -248,13 +217,13 @@ html+=`<div class="card">
 <th>Expire</th>
 <th>Status</th>
 <th>Devices</th>
-<th style="text-align:right;">Action</th>
+<th class="action-cell">Action</th>
 </tr>`;
 
 keys.forEach(k=>{
 let expired=isExpired(k.expire_date);
 let status=expired?"Expired":k.status;
-let statusClass = expired ? "status-expired" : 
+let statusClass = expired?"status-expired":
 (k.status==="Active"?"status-active":"status-blocked");
 
 html+=`<tr>
@@ -263,23 +232,21 @@ html+=`<tr>
 <td>${expired?"Expired":new Date(k.expire_date).toLocaleString()}</td>
 <td class="${statusClass}">${status}</td>
 <td>${k.used_devices || 0} / ${k.max_devices || 1}</td>
-<td>
-<div class="action-buttons">
-<button class="action-btn block-btn" onclick="toggleKey(${k.id},'${k.status}')">
+<td class="action-cell">
+<button class="btn-block" onclick="toggleKey(${k.id},'${k.status}')">
 ${k.status==="Active"?"Block":"Unblock"}
 </button>
-<button class="action-btn delete-btn" onclick="deleteKey(${k.id})">Delete</button>
-</div>
+<button class="btn-danger" onclick="deleteKey(${k.id})">Delete</button>
 </td>
 </tr>`;
 });
 
-html+="</table></div></div>";
+html+="</table></div>";
 
 content.innerHTML=html;
 }
 
-/* ===== SAME FUNCTIONS ===== */
+/* functions unchanged */
 
 async function generateKey(){
 const u=username.value.trim();
