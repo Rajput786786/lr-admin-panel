@@ -7,7 +7,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-
 *{box-sizing:border-box;}
 
 body{
@@ -24,7 +23,6 @@ margin:auto;
 padding:18px;
 }
 
-/* TITLE */
 .title{
 text-align:center;
 font-size:26px;
@@ -34,7 +32,6 @@ text-shadow:0 0 25px red;
 margin:15px 0;
 }
 
-/* LOGOUT */
 .logout{
 float:right;
 background:#ff1a1a;
@@ -46,7 +43,6 @@ box-shadow:0 0 18px red;
 font-weight:bold;
 }
 
-/* SECTION CARD */
 .card{
 background:linear-gradient(145deg,#400000,#1a0000);
 border:2px solid rgba(255,0,0,0.6);
@@ -58,7 +54,8 @@ box-shadow:
 inset 0 0 25px rgba(255,0,0,0.15);
 }
 
-/* 3D INPUT BOX */
+/* ===== GENERATE SECTION (UNCHANGED LOOK) ===== */
+
 input,select{
 width:100%;
 padding:14px;
@@ -74,7 +71,6 @@ inset 0 0 12px rgba(255,0,0,0.4),
 0 0 8px rgba(255,0,0,0.4);
 }
 
-/* BUTTON */
 .btn{
 background:linear-gradient(145deg,#ff1a1a,#c40000);
 border:none;
@@ -86,7 +82,8 @@ font-weight:bold;
 margin-top:10px;
 }
 
-/* TABLE */
+/* ===== TABLE FIXED PROPER ALIGNMENT ===== */
+
 table{
 width:100%;
 table-layout:fixed;
@@ -96,30 +93,51 @@ margin-top:12px;
 
 th,td{
 white-space:nowrap;
-font-size:12.5px;
-padding:8px 4px;
+font-size:11px;
+padding:10px 4px;
 text-align:center;
 border-bottom:1px solid rgba(255,255,255,0.15);
+line-height:1.4;
+overflow:hidden;
 }
 
 th{
 color:#ff4d4d;
+font-size:12px;
 }
+
+/* COLUMN WIDTH BALANCE */
+th:nth-child(1), td:nth-child(1){width:16%;}
+th:nth-child(2), td:nth-child(2){width:22%;}
+th:nth-child(3), td:nth-child(3){width:22%;}
+th:nth-child(4), td:nth-child(4){width:14%;}
+th:nth-child(5), td:nth-child(5){width:12%;}
+th:nth-child(6), td:nth-child(6){width:14%;}
 
 .green{color:#00ff9d;}
 .red{color:red;}
 .blue{color:#00ccff;}
 
 .action-btn{
-padding:5px 8px;
-border-radius:10px;
+padding:6px 8px;
+border-radius:6px;
 border:none;
-font-size:11px;
+font-size:10px;
 font-weight:bold;
+min-width:55px;
+margin:2px 0;
+box-shadow:0 0 8px rgba(255,0,0,0.4);
 }
 
-.block-btn{background:#999;color:black;}
-.delete-btn{background:#ff0033;color:white;}
+.block-btn{
+background:linear-gradient(145deg,#b3b3b3,#8c8c8c);
+color:black;
+}
+
+.delete-btn{
+background:linear-gradient(145deg,#ff1a1a,#c40000);
+color:white;
+}
 
 .hidden{display:none;}
 .clear{clear:both;}
@@ -149,7 +167,7 @@ font-weight:bold;
 
 <script>
 
-/* LOGIC UNCHANGED */
+/* ===== LOGIC 100% SAME ===== */
 
 const supabaseClient = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
