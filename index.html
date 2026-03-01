@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LR OWNER PANEL</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -43,6 +43,7 @@ box-shadow:0 0 18px red;
 font-weight:bold;
 }
 
+/* ===== CARD STYLE ===== */
 .card{
 background:linear-gradient(145deg,#400000,#1a0000);
 border:2px solid rgba(255,0,0,0.6);
@@ -54,7 +55,7 @@ box-shadow:
 inset 0 0 25px rgba(255,0,0,0.15);
 }
 
-/* ===== GENERATE SECTION (UNCHANGED LOOK) ===== */
+/* ===== GENERATE SECTION SAME ===== */
 
 input,select{
 width:100%;
@@ -82,60 +83,58 @@ font-weight:bold;
 margin-top:10px;
 }
 
-/* ===== TABLE FIXED PROPER ALIGNMENT ===== */
+/* ===== CLEAN TABLE (LIKE SECOND IMAGE) ===== */
+
+.table-wrapper{
+overflow-x:auto;
+}
 
 table{
 width:100%;
-table-layout:fixed;
 border-collapse:collapse;
 margin-top:12px;
 }
 
-th,td{
-white-space:nowrap;
-font-size:11px;
-padding:10px 4px;
-text-align:center;
-border-bottom:1px solid rgba(255,255,255,0.15);
-line-height:1.4;
-overflow:hidden;
-}
-
 th{
 color:#ff4d4d;
-font-size:12px;
+font-size:13px;
+padding:10px 6px;
+text-align:left;
 }
 
-/* COLUMN WIDTH BALANCE */
-th:nth-child(1), td:nth-child(1){width:16%;}
-th:nth-child(2), td:nth-child(2){width:22%;}
-th:nth-child(3), td:nth-child(3){width:22%;}
-th:nth-child(4), td:nth-child(4){width:14%;}
-th:nth-child(5), td:nth-child(5){width:12%;}
-th:nth-child(6), td:nth-child(6){width:14%;}
+td{
+font-size:13px;
+padding:12px 6px;
+border-top:1px solid rgba(255,255,255,0.15);
+vertical-align:middle;
+}
 
-.green{color:#00ff9d;}
-.red{color:red;}
-.blue{color:#00ccff;}
+.status-active{color:#00ff9d;}
+.status-expired{color:#00ccff;}
+.status-blocked{color:red;}
+
+.action-buttons{
+display:flex;
+gap:6px;
+justify-content:flex-end;
+}
 
 .action-btn{
-padding:6px 8px;
-border-radius:6px;
+padding:6px 10px;
 border:none;
-font-size:10px;
+border-radius:6px;
+font-size:12px;
 font-weight:bold;
-min-width:55px;
-margin:2px 0;
-box-shadow:0 0 8px rgba(255,0,0,0.4);
+cursor:pointer;
 }
 
 .block-btn{
-background:linear-gradient(145deg,#b3b3b3,#8c8c8c);
+background:#bfbfbf;
 color:black;
 }
 
 .delete-btn{
-background:linear-gradient(145deg,#ff1a1a,#c40000);
+background:#ff1a1a;
 color:white;
 }
 
@@ -167,7 +166,7 @@ color:white;
 
 <script>
 
-/* ===== LOGIC 100% SAME ===== */
+/* ===== LOGIC SAME ===== */
 
 const supabaseClient = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
@@ -241,6 +240,7 @@ const {data:keys}=await supabaseClient
 
 html+=`<div class="card">
 <h3 style="font-size:20px;">Your Keys</h3>
+<div class="table-wrapper">
 <table>
 <tr>
 <th>User</th>
@@ -248,33 +248,38 @@ html+=`<div class="card">
 <th>Expire</th>
 <th>Status</th>
 <th>Devices</th>
-<th>Action</th>
+<th style="text-align:right;">Action</th>
 </tr>`;
 
 keys.forEach(k=>{
 let expired=isExpired(k.expire_date);
 let status=expired?"Expired":k.status;
-let cls=expired?"blue":(k.status==="Active"?"green":"red");
+let statusClass = expired ? "status-expired" : 
+(k.status==="Active"?"status-active":"status-blocked");
 
 html+=`<tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
 <td>${expired?"Expired":new Date(k.expire_date).toLocaleString()}</td>
-<td class="${cls}">${status}</td>
+<td class="${statusClass}">${status}</td>
 <td>${k.used_devices || 0} / ${k.max_devices || 1}</td>
 <td>
+<div class="action-buttons">
 <button class="action-btn block-btn" onclick="toggleKey(${k.id},'${k.status}')">
 ${k.status==="Active"?"Block":"Unblock"}
 </button>
 <button class="action-btn delete-btn" onclick="deleteKey(${k.id})">Delete</button>
+</div>
 </td>
 </tr>`;
 });
 
-html+="</table></div>";
+html+="</table></div></div>";
 
 content.innerHTML=html;
 }
+
+/* ===== SAME FUNCTIONS ===== */
 
 async function generateKey(){
 const u=username.value.trim();
