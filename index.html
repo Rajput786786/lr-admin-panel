@@ -2,117 +2,138 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LR OWNER PANEL</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
+
 body{
 margin:0;
-font-family:Segoe UI,Arial,sans-serif;
-background:radial-gradient(circle at center,#070b1a 0%,#050814 60%,#02040a 100%);
+font-family:Arial, sans-serif;
+background:radial-gradient(circle at center,#2a0000,#000000);
 color:white;
 }
 
+/* TITLE */
 .title{
 text-align:center;
-font-size:26px;
+font-size:28px;
 font-weight:bold;
-color:#00f0ff;
-text-shadow:0 0 20px #00f0ff;
-margin:20px 0;
+color:#ff2a2a;
+text-shadow:0 0 15px red;
+margin:25px 0;
 }
 
+/* GLASS BOX */
 .glass{
-background:rgba(0,255,255,0.05);
-backdrop-filter:blur(15px);
-border:1px solid rgba(0,255,255,0.3);
-box-shadow:0 0 25px rgba(0,255,255,0.2);
-border-radius:18px;
+background:rgba(120,0,0,0.35);
+border:2px solid rgba(255,0,0,0.5);
+box-shadow:0 0 25px rgba(255,0,0,0.6);
+border-radius:20px;
 padding:20px;
-margin:20px;
+margin:15px;
 }
 
+/* INPUT STYLE (UNCHANGED LOOK) */
 input,select{
 width:100%;
-padding:12px;
-margin:10px 0;
+padding:14px;
+margin:12px 0;
 background:transparent;
-border:none;
-border-bottom:2px solid #00f0ff;
+border:2px solid #ff2a2a;
+border-radius:25px;
 color:white;
+font-size:15px;
 outline:none;
+box-shadow:0 0 12px rgba(255,0,0,0.7);
 }
 
+/* BUTTONS */
 button{
-padding:6px 14px;
+padding:8px 14px;
 border:none;
-border-radius:6px;
+border-radius:10px;
 cursor:pointer;
 font-weight:bold;
+margin:4px;
 }
 
 .btn-primary{
-background:#00f0ff;
-color:black;
+background:#ff2a2a;
+color:white;
+box-shadow:0 0 12px red;
 }
 
 .btn-danger{
-background:red;
+background:#ff0000;
 color:white;
+box-shadow:0 0 10px red;
 }
 
 .btn-block{
-background:#aaa;
+background:#cccccc;
 color:black;
 }
 
 .btn-logout{
-background:red;
+background:#ff2a2a;
 color:white;
 float:right;
+border-radius:20px;
+padding:8px 16px;
+box-shadow:0 0 12px red;
 }
 
 .hidden{display:none;}
 
+.clear{clear:both;}
+
+/* ===== YOUR KEYS SECTION FIX ===== */
+
 table{
 width:100%;
 border-collapse:collapse;
-margin-top:15px;
+margin-top:10px;
+font-size:12.5px;
 }
 
 th{
-text-align:left;
-font-size:13px;
-color:#ccc;
-padding-bottom:10px;
-border-bottom:1px solid rgba(255,255,255,0.1);
+color:#ff4d4d;
+padding:8px 4px;
+border-bottom:1px solid rgba(255,255,255,0.2);
+text-align:center;
 }
 
 td{
-padding:12px 4px;
-font-size:13px;
-border-bottom:1px solid rgba(255,255,255,0.05);
-vertical-align:middle;
-}
-
-.status-active{color:#00ff9d;}
-.status-expired{color:#00ccff;}
-.status-blocked{color:red;}
-
-.action-cell{
-text-align:right;
+padding:8px 4px;
+text-align:center;
+border-bottom:1px solid rgba(255,255,255,0.08);
 white-space:nowrap;
 }
 
-.action-cell button{
-margin-left:6px;
-padding:5px 10px;
-border-radius:6px;
-font-size:12px;
+.green{color:#00ff88;}
+.red{color:#ff3b3b;}
+.blue{color:#00ccff;}
+
+.action-btn{
+padding:6px 10px;
+border-radius:8px;
+font-size:11px;
+font-weight:bold;
+margin:2px;
+cursor:pointer;
 }
 
-.clear{clear:both;}
+.block-btn{
+background:#cccccc;
+color:black;
+}
+
+.delete-btn{
+background:#ff2a2a;
+color:white;
+}
+
 </style>
 </head>
 
@@ -136,28 +157,35 @@ font-size:12px;
 
 const supabaseClient = window.supabase.createClient(
 "https://dpskhodrzlnqczibolug.supabase.co",
-"YOUR_ANON_KEY"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwc2tob2RyemxucWN6aWJvbHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjU1MTcsImV4cCI6MjA4NzYwMTUxN30.53CxPWtg_-PpDt_reNsxE1A4KupdhFfv6wbB3HsuhNs"
 );
 
 let currentUser=null;
 let profile=null;
 
+/* LOGIN */
 document.getElementById("loginBtn").addEventListener("click", async ()=>{
 const email=loginEmail.value.trim();
 const password=loginPassword.value.trim();
 if(!email||!password){alert("Enter Email & Password");return;}
+
 const {error}=await supabaseClient.auth.signInWithPassword({email,password});
 if(error){alert(error.message);return;}
+
 loadSession();
 });
 
+/* AUTO SESSION */
 supabaseClient.auth.getSession().then(({data})=>{
 if(data.session) loadSession();
 });
 
+/* LOAD SESSION */
 async function loadSession(){
+
 const {data:{user}}=await supabaseClient.auth.getUser();
 if(!user)return;
+
 currentUser=user;
 
 const {data,error}=await supabaseClient
@@ -175,6 +203,7 @@ panel.classList.remove("hidden");
 renderPanel();
 }
 
+/* LOGOUT */
 async function logout(){
 await supabaseClient.auth.signOut();
 location.reload();
@@ -182,11 +211,12 @@ location.reload();
 
 function isExpired(d){return new Date(d)<new Date();}
 
+/* MAIN RENDER */
 async function renderPanel(){
 
 let html="";
 
-/* Generate section – untouched */
+/* GENERATE SECTION (UNCHANGED) */
 html+=`
 <div class="glass">
 <h3>Generate Key</h3>
@@ -197,11 +227,11 @@ html+=`
 <option value="days">Days</option>
 <option value="hours">Hours</option>
 </select>
-<input type="number" id="maxDevices" placeholder="Max Devices" value="1">
+<input type="number" id="maxDevices" placeholder="Devices" value="1">
 <button class="btn-primary" onclick="generateKey()">Generate</button>
 </div>`;
 
-/* Your Keys section – redesigned only */
+/* LOAD KEYS */
 const {data:keys}=await supabaseClient
 .from("license_keys")
 .select("*")
@@ -217,26 +247,27 @@ html+=`<div class="glass">
 <th>Expire</th>
 <th>Status</th>
 <th>Devices</th>
-<th class="action-cell">Action</th>
+<th>Action</th>
 </tr>`;
 
 keys.forEach(k=>{
 let expired=isExpired(k.expire_date);
 let status=expired?"Expired":k.status;
-let statusClass = expired?"status-expired":
-(k.status==="Active"?"status-active":"status-blocked");
+let cls=expired?"blue":(k.status==="Active"?"green":"red");
 
 html+=`<tr>
 <td>${k.username}</td>
 <td>${k.license_key}</td>
 <td>${expired?"Expired":new Date(k.expire_date).toLocaleString()}</td>
-<td class="${statusClass}">${status}</td>
+<td class="${cls}">${status}</td>
 <td>${k.used_devices || 0} / ${k.max_devices || 1}</td>
-<td class="action-cell">
-<button class="btn-block" onclick="toggleKey(${k.id},'${k.status}')">
+<td>
+<button class="action-btn block-btn" onclick="toggleKey(${k.id},'${k.status}')">
 ${k.status==="Active"?"Block":"Unblock"}
 </button>
-<button class="btn-danger" onclick="deleteKey(${k.id})">Delete</button>
+<button class="action-btn delete-btn" onclick="deleteKey(${k.id})">
+Delete
+</button>
 </td>
 </tr>`;
 });
@@ -246,19 +277,23 @@ html+="</table></div>";
 content.innerHTML=html;
 }
 
-/* functions unchanged */
-
+/* GENERATE KEY */
 async function generateKey(){
+
 const u=username.value.trim();
 const m=manualKey.value.trim();
 const v=parseInt(validity.value);
 const t=type.value;
 const maxDev=parseInt(maxDevices.value)||1;
+
 if(!u||!v){alert("Fill fields");return;}
+
 let key=m||("LR-"+Math.floor(100000+Math.random()*900000));
+
 let expire=new Date();
 if(t==="days")expire.setDate(expire.getDate()+v);
 else expire.setHours(expire.getHours()+v);
+
 await supabaseClient.from("license_keys").insert([{
 username:u,
 license_key:key,
@@ -268,22 +303,29 @@ created_by:currentUser.id,
 max_devices:maxDev,
 used_devices:0
 }]);
+
 renderPanel();
 }
 
+/* BLOCK / UNBLOCK */
 async function toggleKey(id,status){
+
 const {data}=await supabaseClient.from("license_keys")
 .select("expire_date").eq("id",id).single();
+
 if(isExpired(data.expire_date)){
 alert("Expired key cannot be activated");
 return;
 }
+
 await supabaseClient.from("license_keys")
 .update({status:status==="Active"?"Blocked":"Active"})
 .eq("id",id);
+
 renderPanel();
 }
 
+/* DELETE */
 async function deleteKey(id){
 if(!confirm("Delete?"))return;
 await supabaseClient.from("license_keys").delete().eq("id",id);
